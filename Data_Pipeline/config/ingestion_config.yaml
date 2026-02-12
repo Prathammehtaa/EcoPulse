@@ -1,0 +1,24 @@
+electricitymaps:
+  base_url: "https://api.electricitymaps.com"
+  token: "o3ZjQ0d1U7tC24Ax2E6y"
+
+ingestion:
+  signals:
+    - carbon-intensity
+    - carbon-free-energy
+    - price-day-ahead
+    - electricity-flows
+
+  endpoint_template: "/v3/{signal}/past-range"
+
+  start: "2024-01-01T00:00:00Z"
+  end: "2025-01-01T00:00:00Z"
+  chunk_days: 10
+
+  static_params:
+    zone: "US-NE-ISNE"
+    temporalGranularity: "hourly"
+
+gcs:
+  bucket: "ecopulse"
+  raw_prefix: "raw"
