@@ -22,3 +22,21 @@ ingestion:
 gcs:
   bucket: "ecopulse"
   raw_prefix: "raw"
+
+openmeteo:
+  base_url: "https://historical-forecast-api.open-meteo.com/v1/forecast"
+  static_params:
+    latitude: 39.0465
+    longitude: -77.2997
+    timezone: "America/New_York"
+  
+ingestion_weather:
+  signals: ["temperature_2m", "relative_humidity_2m", "cloud_cover", "wind_speed_120m", "rain", "snowfall"]
+  start: "2024-01-01Z"
+  end: "2025-12-31Z"
+  chunk_days: 90
+
+# Ensure your existing gcs config is also here
+gcs:
+  bucket: "ecopulse_bucket"
+  raw_prefix: "weather_raw"
