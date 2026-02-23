@@ -84,10 +84,10 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_POOL_SIZE: 5
     AIRFLOW__DATABASE__SQL_ALCHEMY_MAX_OVERFLOW: 10
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}Data_Pipeline/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}Data_Pipeline/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-.}EcoPulse/Data_Pipeline/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}EcoPulse/Data_Pipeline/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}EcoPulse/Data_Pipeline/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-.}EcoPulse/Data_Pipeline/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

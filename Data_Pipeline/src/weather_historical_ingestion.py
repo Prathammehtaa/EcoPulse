@@ -10,7 +10,7 @@ def load_config():
     """Reads configuration from ingestion_config.yaml."""
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir)
-    config_path = os.path.join(project_root, "config", "ingestion_config.yaml")
+    config_path = os.path.join(project_root, "pipeline config", "ingestion_config.yaml")
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
