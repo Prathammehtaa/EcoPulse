@@ -86,6 +86,7 @@ x-airflow-common:
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/src:/opt/airflow/src
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/data:/opt/airflow/data
