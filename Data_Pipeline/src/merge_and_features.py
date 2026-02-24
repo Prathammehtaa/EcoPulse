@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -9,7 +10,10 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-def load_config(config_path: str = "preprocessing_config.yaml") -> dict:
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = BASE_DIR / "config" / "preprocessing_config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+def load_config(config_path: Path = CONFIG_PATH) -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -113,8 +117,8 @@ def run_merge_and_feature_engineering(config, use_gcs=False):
         proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
         feat_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['features']}"
     else:
-        proc_dir = config["local"]["processed"]
-        feat_dir = config["local"]["features"]
+        proc_dir = PROJECT_ROOT / config["local"]["processed"]
+        feat_dir = PROJECT_ROOT / config["local"]["features"]
         os.makedirs(feat_dir, exist_ok=True)
 
     grid_path = os.path.join(proc_dir, config["output"]["files"]["grid_processed"])
@@ -162,8 +166,7 @@ def run_merge_and_feature_engineering(config, use_gcs=False):
 
     return df
 
-
-if __name__ == "__main__":
+def main():
     config = load_config()
     log_cfg = config.get("logging", {})
     logging.basicConfig(
@@ -174,3 +177,6 @@ if __name__ == "__main__":
     print(f"\nFeature table done! Shape: {df.shape}")
     for i, col in enumerate(df.columns, 1):
         print(f"  {i:2d}. {col}")
+
+if __name__ == "__main__":
+    main()

@@ -10,7 +10,10 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-def load_config(config_path: str = "preprocessing_config.yaml") -> dict:
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = BASE_DIR / "config" / "preprocessing_config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+def load_config(config_path: Path = CONFIG_PATH) -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -139,8 +142,8 @@ def process_weather_data(config, use_gcs=False):
         base_path = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['raw_weather']}"
         output_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
     else:
-        base_path = config["local"]["raw_weather"]
-        output_dir = config["local"]["processed"]
+        base_path = PROJECT_ROOT / config["local"]["raw_weather"]
+        output_dir = PROJECT_ROOT / config["local"]["processed"]
         os.makedirs(output_dir, exist_ok=True)
 
     weather_cfg = config["weather"]
@@ -203,14 +206,16 @@ def process_weather_data(config, use_gcs=False):
 
     return df
 
-
-if __name__ == "__main__":
+def main():
     config = load_config()
     log_cfg = config.get("logging", {})
     logging.basicConfig(
         level=getattr(logging, log_cfg.get("level", "INFO")),
         format=log_cfg.get("format", "%(asctime)s | %(name)s | %(levelname)s | %(message)s"),
     )
-    df = process_weather_data(config, use_gcs=False)
+    df = process_weather_data(config, use_gcs=True)
     print(f"\nWeather done! Shape: {df.shape} | Nulls: {df.isnull().sum().sum()}")
     print(f"Columns: {df.columns.tolist()}")
+
+if __name__ == "__main__":
+    main()

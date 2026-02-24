@@ -9,9 +9,10 @@ import pandas as pd
 import yaml
 
 logger = logging.getLogger(__name__)
-
-
-def load_config(config_path: str = "preprocessing_config.yaml") -> dict:
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = BASE_DIR / "config" / "preprocessing_config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+def load_config(config_path: Path = CONFIG_PATH) -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -50,7 +51,7 @@ def read_jsonl_files(folder_path: str) -> list:
 
 
 def read_single_signal(base_path, zone, signal, value_field_overrides):
-    folder_path = os.path.join(base_path, f"zone={zone}", signal)
+    folder_path = f"{base_path}/zone={zone}/{signal}"
     records = read_jsonl_files(folder_path)
 
     if not records:
@@ -164,8 +165,8 @@ def process_grid_data(config, use_gcs=False):
         base_path = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['raw_grid']}"
         output_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
     else:
-        base_path = config["local"]["raw_grid"]
-        output_dir = config["local"]["processed"]
+        base_path = PROJECT_ROOT / config["local"]["raw_grid"]
+        output_dir = PROJECT_ROOT / config["local"]["processed"]
         os.makedirs(output_dir, exist_ok=True)
 
     grid_cfg = config["grid"]
@@ -237,10 +238,15 @@ def process_grid_data(config, use_gcs=False):
 
     return df
 
-
-if __name__ == "__main__":
+def main():
     config = load_config()
     setup_logging(config)
-    df = process_grid_data(config, use_gcs=False)
+    df = process_grid_data(config, use_gcs=True)
     print(f"\nGrid done! Shape: {df.shape} | Nulls: {df.isnull().sum().sum()}")
     print(f"Columns: {df.columns.tolist()}")
+
+
+
+
+if __name__ == "__main__":
+    main()

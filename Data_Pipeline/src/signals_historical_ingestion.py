@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta, timezone
 from google.cloud import storage
 import os
-
+from pathlib import Path
 
 def load_config():
     base_dir = os.path.dirname(os.path.abspath(__file__))

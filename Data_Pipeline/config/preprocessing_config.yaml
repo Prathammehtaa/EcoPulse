@@ -3,7 +3,7 @@ gcs:
   bucket: "ecopulse"
   paths:
     raw_grid: "raw/grid_signals"
-    raw_weather: "raw/weather_raw"
+    raw_weather: "raw/weather"
     processed: "processed"
     features: "features"
     schemas: "schemas"
@@ -11,7 +11,7 @@ gcs:
 # ---- Local Data Paths ----
 local:
   raw_grid: "data/raw/grid_signals"
-  raw_weather: "data/raw/weather_raw"
+  raw_weather: "data/raw/weather"
   processed: "data/processed"
   features: "data/features"
   schemas: "schema_validation/schemas"
@@ -42,7 +42,7 @@ regions:
 
 # ---- Training Window ----
 training_window:
-  start: "2024-01-01"
+  start: "2023-01-01"
   end: "2025-12-31"
 
 # ---- Grid Preprocessing ----
