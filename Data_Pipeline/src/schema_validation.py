@@ -24,6 +24,9 @@ def validate_dataset(df, dataset_name, schemas_dir='data_validation/schemas'):
         True if valid, False if anomalies detected
     """
     try:
+        if df.empty or len(df) == 0:
+            logger.error(f"Empty DataFrame provided for {dataset_name}")
+            return False
         schema_path = os.path.join(schemas_dir, f'{dataset_name}_schema.pbtxt')
         
         if not os.path.exists(schema_path):
