@@ -26,5 +26,5 @@ jobs:
     
     - name: Run preprocessing tests
       run: |
-        cd Pratham
+        cd Data_Pipeline
         pytest tests/test_preprocessing.py -v
