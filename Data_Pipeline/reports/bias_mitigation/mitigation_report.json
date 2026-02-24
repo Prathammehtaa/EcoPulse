@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-02-22T01:53:25.858527",
+  "strategy": "random_oversampling",
+  "before": {
+    "samples": 26352,
+    "imbalance_ratio": 16.12,
+    "severity": "SEVERE",
+    "distribution": {
+      "Medium": 13021,
+      "High": 7318,
+      "Low": 4320,
+      "Very Low": 885,
+      "Very High": 808
+    }
+  },
+  "after": {
+    "samples": 65105,
+    "imbalance_ratio": 1.0,
+    "severity": "LOW",
+    "distribution": {
+      "Medium": 13021,
+      "Very Low": 13021,
+      "High": 13021,
+      "Very High": 13021,
+      "Low": 13021
+    }
+  },
+  "splits": {
+    "train": 45570,
+    "val": 9765,
+    "test": 9770
+  }
+}

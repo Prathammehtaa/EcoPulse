@@ -20,5 +20,5 @@ ingestion:
     temporalGranularity: "hourly"
 
 gcs:
-  bucket: "ecopulse"
+  bucket: "ecopulse-kapish"
   raw_prefix: "raw"
