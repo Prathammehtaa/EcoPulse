@@ -47,7 +47,7 @@ ingestion:
 
 
 gcs:
-  bucket: "ecopulse"
+  bucket: "ecopulse-kapish"
   raw_prefix: "raw"
 
 # Global Weather API Settings
