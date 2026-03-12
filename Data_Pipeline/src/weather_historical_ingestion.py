@@ -20,7 +20,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 def load_config():
     """Reads configuration from ingestion_config.yaml (from project root)."""
-    config_path = PROJECT_ROOT / "config" / "ingestion_config.yaml"
+    config_path = PROJECT_ROOT / "pipeline_config" / "ingestion_config.yaml"
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 

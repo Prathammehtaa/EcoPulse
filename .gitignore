@@ -16,6 +16,7 @@ eggs/
 .eggs/
 lib/
 data/
+logs/
 lib64/
 parts/
 sdist/
@@ -208,3 +209,4 @@ marimo/_lsp/
 __marimo__/
 .idea/
 .cfg
+gcp-sa.json
