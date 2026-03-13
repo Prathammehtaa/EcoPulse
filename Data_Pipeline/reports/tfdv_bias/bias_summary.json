@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-02-22T01:48:26.724801",
+  "dimensions": {
+    "carbon_intensity_bucket": {
+      "imbalance_ratio": 6.29,
+      "severity": "HIGH",
+      "sample_count": 105408
+    },
+    "hour_of_day": {
+      "imbalance_ratio": 1.0,
+      "severity": "LOW",
+      "sample_count": 105408
+    },
+    "day_of_week": {
+      "imbalance_ratio": 1.02,
+      "severity": "LOW",
+      "sample_count": 105408
+    },
+    "month": {
+      "imbalance_ratio": 1.07,
+      "severity": "LOW",
+      "sample_count": 105408
+    },
+    "season": {
+      "imbalance_ratio": 1.01,
+      "severity": "LOW",
+      "sample_count": 105408
+    },
+    "is_weekend": {
+      "imbalance_ratio": 2.52,
+      "severity": "MODERATE",
+      "sample_count": 105408
+    }
+  },
+  "overall_severity": "HIGH"
+}

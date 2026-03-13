@@ -154,4 +154,4 @@ with DAG(
 
     start >> [grid_pipeline, weather_pipeline]
     [grid_pipeline, weather_pipeline] >> join_before_merge
-    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> notify_success_email >> end
+    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> email_success >> end

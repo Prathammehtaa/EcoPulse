@@ -1,0 +1,3 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+False,75456,71.58,50.0,43.16,False,False
+True,29952,28.42,50.0,-43.16,False,False
