@@ -1,0 +1,22 @@
+artifact_path: file:C:/Users/aadik/Documents/EcoPulse/Model_Pipeline/src/mlruns/1/models/m-39e83e3bf90c453293005d23c1e73b50/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.13.5
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBRegressor
+    model_format: ubj
+    xgb_version: 3.1.3
+mlflow_version: 3.10.1
+model_id: m-39e83e3bf90c453293005d23c1e73b50
+model_size_bytes: 2209121
+model_uuid: m-39e83e3bf90c453293005d23c1e73b50
+prompts: null
+run_id: 5dc937b720a748d5acde1b50d54d9b2f
+utc_time_created: '2026-03-19 06:18:08.651372'
