@@ -1,8 +1,8 @@
 slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
-Friday,14976,14.21,14.29,-0.53,False,False
-Monday,15264,14.48,14.29,1.36,False,False
-Saturday,14976,14.21,14.29,-0.53,False,False
-Sunday,14976,14.21,14.29,-0.53,False,False
-Thursday,14976,14.21,14.29,-0.53,False,False
-Tuesday,15264,14.48,14.29,1.36,False,False
-Wednesday,14976,14.21,14.29,-0.53,False,False
+Friday,7488,14.23,14.29,-0.39,False,False
+Monday,7536,14.32,14.29,0.24,False,False
+Saturday,7488,14.23,14.29,-0.39,False,False
+Sunday,7536,14.32,14.29,0.24,False,False
+Thursday,7488,14.23,14.29,-0.39,False,False
+Tuesday,7536,14.32,14.29,0.24,False,False
+Wednesday,7536,14.32,14.29,0.24,False,False

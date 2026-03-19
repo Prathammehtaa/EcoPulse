@@ -35,7 +35,8 @@ except ImportError:
 # ----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, "data", "stage")
+ECO_PULSE_ROOT = os.path.dirname(PROJECT_ROOT)
+DATA_FILE = os.path.join(ECO_PULSE_ROOT, "merged_dataset.parquet")
 REPORTS_DIR = os.path.join(PROJECT_ROOT, "reports", "tfdv_bias")
 
 # Slicing dimensions for bias analysis
@@ -72,30 +73,17 @@ IMBALANCE_THRESHOLD = 0.5  # Flag if <50% of expected
 # ----------------------------
 # Data Loading
 # ----------------------------
-def load_staged_data(data_dir: str = DATA_DIR) -> pd.DataFrame:
-    """Load staged parquet files."""
-    logger.info(f"Looking for parquet files in: {data_dir}")
+def load_staged_data(data_file: str = DATA_FILE) -> pd.DataFrame:
+    """Load the merged dataset parquet file."""
+    logger.info(f"Loading: {data_file}")
 
-    if not os.path.exists(data_dir):
-        logger.error(f"Directory not found: {data_dir}")
+    if not os.path.exists(data_file):
+        logger.error(f"File not found: {data_file}")
         return pd.DataFrame()
 
-    parquet_files = [f for f in os.listdir(data_dir) if f.endswith('.parquet')]
-
-    if not parquet_files:
-        logger.error(f"No parquet files found in {data_dir}")
-        return pd.DataFrame()
-
-    dfs = []
-    for f in parquet_files:
-        path = os.path.join(data_dir, f)
-        logger.info(f"Loading: {path}")
-        df = pd.read_parquet(path)
-        dfs.append(df)
-
-    combined = pd.concat(dfs, ignore_index=True)
-    logger.info(f"Loaded {len(combined)} total rows")
-    return combined
+    df = pd.read_parquet(data_file)
+    logger.info(f"Loaded {len(df)} rows")
+    return df
 
 
 # ----------------------------
@@ -105,12 +93,12 @@ def add_slice_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add temporal features for bias analysis slicing."""
     df = df.copy()
 
-    if 'timestamp_utc' not in df.columns:
-        logger.warning("No timestamp_utc column found")
+    if 'datetime' not in df.columns:
+        logger.warning("No datetime column found")
         return df
 
     # Ensure datetime type
-    df['timestamp_utc'] = pd.to_datetime(df['timestamp_utc'], utc=True)
+    df['timestamp_utc'] = pd.to_datetime(df['datetime'], utc=True)
 
     # Temporal features
     df['hour_of_day'] = df['timestamp_utc'].dt.hour.astype(str)
