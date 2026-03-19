@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-03-17T20:01:17.441106",
+  "baselines": {
+    "persistence_1h": {
+      "mae": 52.03,
+      "rmse": 68.72,
+      "mape": 17.74
+    },
+    "persistence_24h": {
+      "mae": 64.04,
+      "rmse": 82.1,
+      "mape": 23.94
+    },
+    "historical_mean": {
+      "mae": 106.73,
+      "rmse": 127.89,
+      "mape": 64.64
+    }
+  },
+  "data_split": {
+    "train_rows": 43776,
+    "val_rows": 4416,
+    "test_rows": 4368,
+    "total_rows": 52560
+  }
+}

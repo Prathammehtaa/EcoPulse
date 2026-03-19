@@ -1,33 +1,33 @@
 {
-  "generated_at": "2026-02-22T01:53:25.858527",
+  "generated_at": "2026-03-17T19:01:33.568038",
   "strategy": "random_oversampling",
   "before": {
-    "samples": 26352,
-    "imbalance_ratio": 16.12,
-    "severity": "SEVERE",
+    "samples": 52608,
+    "imbalance_ratio": 6.67,
+    "severity": "HIGH",
     "distribution": {
-      "Medium": 13021,
-      "High": 7318,
-      "Low": 4320,
-      "Very Low": 885,
-      "Very High": 808
+      "Medium": 19194,
+      "High": 17647,
+      "Low": 9173,
+      "Very Low": 3715,
+      "Very High": 2879
     }
   },
   "after": {
-    "samples": 65105,
+    "samples": 95970,
     "imbalance_ratio": 1.0,
     "severity": "LOW",
     "distribution": {
-      "Medium": 13021,
-      "Very Low": 13021,
-      "High": 13021,
-      "Very High": 13021,
-      "Low": 13021
+      "Very High": 19194,
+      "Low": 19194,
+      "Medium": 19194,
+      "Very Low": 19194,
+      "High": 19194
     }
   },
   "splits": {
-    "train": 45570,
-    "val": 9765,
-    "test": 9770
+    "train": 67175,
+    "val": 14395,
+    "test": 14400
   }
 }
