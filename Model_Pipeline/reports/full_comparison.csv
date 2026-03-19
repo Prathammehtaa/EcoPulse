@@ -1,0 +1,13 @@
+horizon,model,model_type,mae,rmse,r2,mape
+1,Best Baseline (1h),baseline,57.4815,73.2309,0.5308,17.7838
+1,XGBoost (1h),xgboost,25.143,33.2609,0.9032,8.9587
+1,LightGBM (1h),lightgbm,25.9637,34.0967,0.8983,9.1217
+6,Best Baseline (6h),baseline,71.3281,90.8556,0.2794,22.9931
+6,XGBoost (6h),xgboost,34.3439,45.7592,0.8172,12.5577
+6,LightGBM (6h),lightgbm,35.5831,46.944,0.8076,12.9808
+12,Best Baseline (12h),baseline,76.3555,98.8733,0.1488,24.2145
+12,XGBoost (12h),xgboost,39.9707,52.7289,0.7579,14.837
+12,LightGBM (12h),lightgbm,40.0421,52.4504,0.7605,14.8225
+24,Best Baseline (24h),baseline,68.793,88.1301,0.3259,21.7627
+24,XGBoost (24h),xgboost,43.014,57.0165,0.7179,16.3507
+24,LightGBM (24h),lightgbm,43.7627,57.9106,0.7089,16.6507
