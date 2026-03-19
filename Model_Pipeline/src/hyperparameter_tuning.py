@@ -1,0 +1,232 @@
+"""
+EcoPulse Hyperparameter Tuning with Optuna
+===========================================
+Systematically searches for the best XGBoost hyperparameters
+for each forecast horizon using Bayesian optimization.
+
+HOW IT WORKS:
+Optuna tries different combinations of hyperparameters (max_depth,
+learning_rate, etc.) and uses the validation MAE to decide which
+combinations to try next. Unlike grid search (which tries everything),
+Optuna is smart — it focuses on promising regions of the search space.
+
+Author: Aaditya Krishna (ML Modelling Lead)
+Run: cd Model_Pipeline/src && python hyperparameter_tuning.py
+"""
+
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+import optuna
+from optuna.samplers import TPESampler
+import joblib
+from datetime import datetime
+
+from utils import (
+    load_all_splits, prepare_Xy, align_columns,
+    compute_metrics, print_metrics, print_metrics_table,
+    save_results, save_model, ensure_dirs,
+    FORECAST_TARGETS, HORIZONS, MODELS_DIR, REPORTS_DIR,
+    logger, get_timestamp
+)
+
+# Suppress Optuna's verbose logging
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# Number of trials per horizon
+N_TRIALS = 50  # Takes ~10-15 min total. Increase to 100 for better results.
+
+
+def create_objective(X_train, y_train, X_val, y_val):
+    """
+    Create an Optuna objective function for a specific horizon.
+    
+    WHAT OPTUNA DOES:
+    Each "trial" picks a set of hyperparameters from the defined ranges.
+    It trains an XGBoost model with those params, evaluates on validation,
+    and returns the MAE. Optuna uses TPE (Tree-structured Parzen Estimator)
+    to intelligently pick the next set of params based on what worked before.
+    
+    SEARCH SPACE:
+    - n_estimators: 200-1500 (more trees since current models used all 500)
+    - max_depth: 3-10 (shallow to deep trees)
+    - learning_rate: 0.01-0.3 (small careful steps to large aggressive steps)
+    - subsample: 0.5-1.0 (how much data each tree sees)
+    - colsample_bytree: 0.5-1.0 (how many features each tree sees)
+    - min_child_weight: 1-20 (minimum samples per leaf)
+    - reg_alpha: 0.0-2.0 (L1 regularization)
+    - reg_lambda: 0.0-5.0 (L2 regularization)
+    """
+    def objective(trial):
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 200, 1500),
+            "max_depth": trial.suggest_int("max_depth", 3, 10),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+            "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 2.0),
+            "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 5.0),
+            "random_state": 42,
+            "n_jobs": -1,
+            "early_stopping_rounds": 30,
+        }
+
+        model = xgb.XGBRegressor(**params)
+        model.fit(
+            X_train, y_train,
+            eval_set=[(X_val, y_val)],
+            verbose=False
+        )
+
+        preds = model.predict(X_val)
+        mae = np.mean(np.abs(y_val - preds))
+        return mae
+
+    return objective
+
+
+def tune_horizon(train_df, val_df, test_df, horizon, n_trials=N_TRIALS):
+    """Run Optuna tuning for a single horizon."""
+    logger.info(f"Tuning XGBoost for {horizon}h horizon ({n_trials} trials)...")
+
+    # Prepare data
+    X_train, y_train, _ = prepare_Xy(train_df, horizon)
+    X_val, y_val, _ = prepare_Xy(val_df, horizon)
+    X_test, y_test, _ = prepare_Xy(test_df, horizon)
+    X_train, X_val, X_test, feature_cols = align_columns(X_train, X_val, X_test)
+
+    # Create and run study
+    study = optuna.create_study(
+        direction="minimize",
+        sampler=TPESampler(seed=42),
+        study_name=f"xgboost_{horizon}h"
+    )
+
+    objective = create_objective(X_train, y_train, X_val, y_val)
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    # Best params
+    best_params = study.best_params
+    best_params["random_state"] = 42
+    best_params["n_jobs"] = -1
+    best_params["early_stopping_rounds"] = 30
+
+    print(f"\n  Best params for {horizon}h:")
+    for k, v in best_params.items():
+        if k not in ["random_state", "n_jobs", "early_stopping_rounds"]:
+            print(f"    {k}: {v}")
+    print(f"  Best validation MAE: {study.best_value:.4f}")
+
+    # Retrain with best params on full training data
+    final_model = xgb.XGBRegressor(**best_params)
+    final_model.fit(
+        X_train, y_train,
+        eval_set=[(X_val, y_val)],
+        verbose=False
+    )
+
+    # Evaluate on all splits
+    results = {}
+    for split_name, X, y in [("train", X_train, y_train),
+                              ("val", X_val, y_val),
+                              ("test", X_test, y_test)]:
+        preds = final_model.predict(X)
+        metrics = compute_metrics(y, preds)
+        results[split_name] = metrics
+
+    print(f"\n  Tuned XGBoost {horizon}h Results:")
+    for split_name in ["train", "val", "test"]:
+        print_metrics(results[split_name], f"    {split_name}")
+
+    return {
+        "model": final_model,
+        "results": results,
+        "best_params": best_params,
+        "best_val_mae": study.best_value,
+        "study": study,
+        "feature_cols": feature_cols,
+        "horizon": horizon,
+    }
+
+
+def run_tuning():
+    """Run hyperparameter tuning for all horizons."""
+    print("=" * 80)
+    print("ECOPULSE HYPERPARAMETER TUNING (OPTUNA)")
+    print(f"Trials per horizon: {N_TRIALS}")
+    print("=" * 80)
+
+    splits = load_all_splits()
+    train, val, test = splits["train"], splits["val"], splits["test"]
+
+    ensure_dirs()
+    all_results = []
+    all_params = {}
+
+    # Original XGBoost results for comparison
+    original_mae = {1: 25.14, 6: 34.34, 12: 39.97, 24: 43.01}
+
+    for horizon in HORIZONS:
+        print(f"\n{'='*80}")
+        print(f"  TUNING: {horizon}h HORIZON")
+        print(f"{'='*80}")
+
+        result = tune_horizon(train, val, test, horizon)
+
+        # Save tuned model
+        save_model(result["model"], f"xgboost_tuned_{horizon}h")
+
+        # Collect results
+        test_metrics = result["results"]["test"].copy()
+        test_metrics["model"] = f"XGBoost Tuned ({horizon}h)"
+        test_metrics["horizon"] = horizon
+        all_results.append(test_metrics)
+        all_params[horizon] = result["best_params"]
+
+    # Summary
+    print(f"\n{'='*80}")
+    print("TUNING SUMMARY (TEST SET)")
+    print(f"{'='*80}")
+    print_metrics_table(all_results)
+
+    # Comparison with original
+    print(f"\n{'='*80}")
+    print("TUNED vs ORIGINAL XGBOOST")
+    print(f"{'='*80}")
+    print(f"  {'Horizon':<10} {'Original MAE':>15} {'Tuned MAE':>15} {'Improvement':>15}")
+    print(f"  {'-'*55}")
+    for r in all_results:
+        h = r["horizon"]
+        orig = original_mae[h]
+        tuned = r["mae"]
+        imp = ((orig - tuned) / orig) * 100
+        status = "IMPROVED" if tuned < orig else "NO GAIN"
+        print(f"  {f'{h}h':<10} {orig:>15.2f} {tuned:>15.2f} {f'{imp:+.1f}% {status}':>15}")
+
+    # Save results
+    save_results(all_results, "tuned_xgboost_results.csv")
+
+    # Save best params
+    params_df = pd.DataFrame([
+        {"horizon": h, **{k: v for k, v in p.items() 
+         if k not in ["random_state", "n_jobs", "early_stopping_rounds"]}}
+        for h, p in all_params.items()
+    ])
+    params_path = os.path.join(REPORTS_DIR, "best_hyperparameters.csv")
+    params_df.to_csv(params_path, index=False)
+
+    print(f"\n✅ Hyperparameter tuning complete!")
+    print(f"   Tuned models saved to: models/xgboost_tuned_*.joblib")
+    print(f"   Results saved to: reports/tuned_xgboost_results.csv")
+    print(f"   Best params saved to: reports/best_hyperparameters.csv")
+
+    return all_results
+
+
+if __name__ == "__main__":
+    results = run_tuning()
