@@ -1,0 +1,23 @@
+artifact_path: file:C:/Users/aadik/Documents/EcoPulse/Model_Pipeline/src/mlruns/1/models/m-d4e35613a3e14654b89af1c08baff1d5/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMRegressor
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.13.5
+mlflow_version: 3.10.1
+model_id: m-d4e35613a3e14654b89af1c08baff1d5
+model_size_bytes: 1419199
+model_uuid: m-d4e35613a3e14654b89af1c08baff1d5
+prompts: null
+run_id: 4e59f02f4ec14cda826405db140866b8
+utc_time_created: '2026-03-19 14:16:22.246811'
