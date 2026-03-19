@@ -219,7 +219,7 @@ def notify_success_slack(
             f"*DAG:* {dag_id}\n"
             f"*Run:* {run_id}\n"
             f"*When:* {ts}\n"
-            f"All steps completed (grid + weather → merge/features → validation)."
+            f"All steps completed!"
         )
         post_to_slack(msg, conn_id=slack_conn_id, fallback_variable=slack_fallback_variable)
     except Exception as e:

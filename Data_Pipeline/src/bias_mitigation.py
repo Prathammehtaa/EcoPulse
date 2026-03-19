@@ -7,7 +7,6 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 ECO_PULSE_ROOT = os.path.dirname(PROJECT_ROOT)
-STAGE_DIR = os.path.join(PROJECT_ROOT, 'data', 'stage')
 PROCESSED_DIR = os.path.join(PROJECT_ROOT, 'data', 'processed')
 REPORTS_DIR = os.path.join(PROJECT_ROOT, 'reports', 'bias_mitigation')
 
@@ -90,7 +89,7 @@ def main():
     print('='*60)
 
     # Load data
-    input_path = os.path.join(ECO_PULSE_ROOT, 'merged_dataset.parquet')
+    input_path = os.path.join(PROCESSED_DIR, 'merged_dataset.parquet')
     print(f'Loading: {input_path}')
     df = pd.read_parquet(input_path)
     print(f'Loaded {len(df)} rows')
