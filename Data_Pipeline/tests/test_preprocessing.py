@@ -5,15 +5,8 @@ Tests grid, weather, and merge/feature engineering logic
 import sys
 import os
 from pathlib import Path
-from merge_and_features import (
-    add_temporal_features,
-    add_lag_features,
-    add_rolling_features,
-    add_interaction_features,
-    handle_feature_nulls
-)
 
-# Add src directory to path
+# Add src directory to path FIRST
 current_file = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file)
 project_root = os.path.dirname(current_dir)
@@ -24,6 +17,8 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
+
+# NOW import from local modules
 from grid_preprocessing import (
     remove_duplicates,
     fill_timeline_gaps,
@@ -38,7 +33,12 @@ from weather_preprocessing import (
     validate_and_clip as weather_validate_and_clip
 )
 from merge_and_features import (
-    merge_datasets
+    merge_datasets,
+    add_temporal_features,
+    add_lag_features,
+    add_rolling_features,
+    add_interaction_features,
+    handle_feature_nulls
 )
 
 
