@@ -1,0 +1,18 @@
+model,horizon,slice_type,slice_value,n_samples,mae,rmse,r2,mape
+lightgbm,24,overall,all,4368,43.7627,57.9106,0.7089,16.6507
+lightgbm,24,zone,US-MIDA-PJM,2184,28.8041,36.7446,0.7432,7.0027
+lightgbm,24,zone,US-NW-PACW,2184,58.7214,73.1922,0.2795,26.2987
+lightgbm,24,season,Fall,2928,44.9129,59.712,0.5679,14.6309
+lightgbm,24,season,Winter,1440,41.424,54.0629,0.8349,20.7576
+lightgbm,24,carbon_bucket,High (350-500),1681,36.0577,48.8289,0.6215,9.632
+lightgbm,24,carbon_bucket,Low (100-200),476,52.8188,65.243,0.0475,34.9709
+lightgbm,24,carbon_bucket,Medium (200-350),1909,49.9388,65.0764,0.5283,19.3414
+lightgbm,24,carbon_bucket,Very High (500+),267,30.5595,37.2903,0.7491,7.3198
+lightgbm,24,carbon_bucket,Very Low (0-100),35,54.524,67.3583,-0.885,29.0187
+lightgbm,24,weather_condition,Cold (< 5C),996,34.394,46.383,0.8234,12.4741
+lightgbm,24,weather_condition,Mild (5-20C),3251,46.8456,61.1994,0.6358,18.1206
+lightgbm,24,weather_condition,Hot (>= 20C),121,38.0498,52.1991,0.6237,11.537
+lightgbm,24,weather_condition,Windy (>= 10 m/s),3428,42.2577,55.8679,0.738,16.3211
+lightgbm,24,weather_condition,Calm (< 10 m/s),940,49.2511,64.8166,0.5747,17.8526
+lightgbm,24,weather_condition,Overcast (>= 75%),2592,48.406,63.2506,0.6698,18.7703
+lightgbm,24,weather_condition,Clear (< 25%),1147,34.0342,44.7404,0.7739,10.616

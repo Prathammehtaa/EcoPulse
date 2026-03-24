@@ -1,0 +1,9 @@
+model,horizon,overall_mae,overall_rmse,overall_r2,worst_zone,worst_zone_mae,worst_carbon_bucket,worst_carbon_bucket_mae,n_flagged_slices
+lightgbm,1,25.9637,34.0967,0.8983,US-NW-PACW,32.2755,Medium (200-350),28.5982,3
+lightgbm,6,35.5831,46.944,0.8076,US-NW-PACW,45.1064,Very Low (0-100),60.9727,4
+lightgbm,12,40.0421,52.4504,0.7605,US-NW-PACW,51.6263,Very Low (0-100),63.2684,5
+lightgbm,24,43.7627,57.9106,0.7089,US-NW-PACW,58.7214,Very Low (0-100),54.524,7
+xgboost,1,25.143,33.2609,0.9032,US-NW-PACW,31.8597,Very Low (0-100),29.2731,3
+xgboost,6,34.3439,45.7592,0.8172,US-NW-PACW,44.0484,Very Low (0-100),69.9799,4
+xgboost,12,39.9707,52.7289,0.7579,US-NW-PACW,52.4535,Very Low (0-100),68.0476,7
+xgboost,24,43.014,57.0165,0.7179,US-NW-PACW,57.6771,Low (100-200),51.3199,5
