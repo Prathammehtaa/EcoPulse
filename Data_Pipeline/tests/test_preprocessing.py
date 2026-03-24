@@ -5,6 +5,13 @@ Tests grid, weather, and merge/feature engineering logic
 import sys
 import os
 from pathlib import Path
+from merge_and_features import (
+    add_temporal_features,
+    add_lag_features,
+    add_rolling_features,
+    add_interaction_features,
+    handle_feature_nulls
+)
 
 # Add src directory to path
 current_file = os.path.abspath(__file__)
