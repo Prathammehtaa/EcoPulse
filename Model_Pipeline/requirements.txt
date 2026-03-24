@@ -1,0 +1,28 @@
+
+# EcoPulse — Model Pipeline Requirements
+# Person 4: Model Validation & Sensitivity Analysis
+# Install: pip install -r requirements.txt
+
+# Core ML
+xgboost==3.2.0
+lightgbm==4.6.0
+scikit-learn==1.8.0
+
+# Explainability
+shap==0.51.0
+lime==0.2.0.1
+
+# Data
+pandas==3.0.1
+numpy==2.4.3
+pyarrow==23.0.1
+joblib==1.5.3
+
+# Visualization
+matplotlib==3.10.8
+seaborn==0.13.2
+
+# Utilities
+scipy==1.17.1
+tqdm==4.67.3
+cloudpickle==3.1.2
