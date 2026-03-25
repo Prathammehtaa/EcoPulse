@@ -42,6 +42,15 @@ from mlflow_config import (
     register_model, TUNING_EXPERIMENT_NAME,
 )
 
+# GCP Artifact Registry push — opt-in via GCP_PUSH_MODELS=1
+_GCP_PUSH = os.getenv("GCP_PUSH_MODELS", "0") == "1"
+if _GCP_PUSH:
+    try:
+        from gcp_registry import push_after_mlflow_log, make_version_string
+    except ImportError:
+        logger.warning("gcp_registry imports failed — GCP push disabled for this run")
+        _GCP_PUSH = False
+
 # Suppress Optuna's verbose logging
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -263,8 +272,22 @@ def run_tuning():
                 run_id = mlflow.active_run().info.run_id
                 register_model(run_id, f"xgboost_tuned_{horizon}h", horizon, "xgboost_tuned")
 
-            # Save tuned model locally (outside MLflow context, unchanged)
-            save_model(result["model"], f"xgboost_tuned_{horizon}h")
+                # Save tuned model locally
+                save_model(result["model"], f"xgboost_tuned_{horizon}h")
+
+                # --- GCP Artifact Registry push (opt-in via GCP_PUSH_MODELS=1) ---
+                if _GCP_PUSH:
+                    push_after_mlflow_log(
+                        model_path=os.path.join(MODELS_DIR, f"xgboost_tuned_{horizon}h.joblib"),
+                        model_name=f"xgboost_tuned_{horizon}h",
+                        version=make_version_string("xgboost_tuned", horizon),
+                        mlflow_run_id=run_id,
+                        horizon=horizon,
+                        model_type="xgboost_tuned",
+                        metrics=result["results"]["test"],
+                        performance_tier=tier,
+                        auto_promote=True,
+                    )
 
             # Collect results
             test_metrics = result["results"]["test"].copy()
