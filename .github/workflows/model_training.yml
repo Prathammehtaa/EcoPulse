@@ -96,6 +96,11 @@ jobs:
       inputs.model_type == 'xgboost' ||
       inputs.model_type == 'both'
 
+    # Secrets cannot be read in `if` conditions — expose as env vars instead
+    # so step-level `if: env.VAR != ''` works correctly.
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
     steps:
       # ── 1. Source code ──────────────────────────────────────
       - name: Checkout repository
@@ -117,13 +122,13 @@ jobs:
       # gcp_registry.push_after_mlflow_log() already handles auth failures
       # without aborting training, so this gate is an early-exit optimisation.
       - name: Authenticate to GCP
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up gcloud CLI
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
@@ -214,6 +219,9 @@ jobs:
       inputs.model_type == 'lightgbm' ||
       inputs.model_type == 'both'
 
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -230,13 +238,13 @@ jobs:
 
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up gcloud CLI
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
@@ -323,6 +331,9 @@ jobs:
       github.event_name == 'workflow_dispatch' &&
       inputs.model_type == 'tune'
 
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -339,13 +350,13 @@ jobs:
 
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up gcloud CLI
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
@@ -738,6 +749,9 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
 
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -777,7 +791,7 @@ jobs:
 
       # ── Build and send Slack payload ────────────────────────
       - name: Send Slack notification
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: env.SLACK_WEBHOOK_URL != ''
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           XGB_STATUS:        ${{ needs.train-xgboost.result }}
@@ -922,7 +936,7 @@ jobs:
           PYEOF
 
       - name: Log pipeline summary (no Slack webhook)
-        if: ${{ secrets.SLACK_WEBHOOK_URL == '' }}
+        if: env.SLACK_WEBHOOK_URL == ''
         env:
           XGB_STATUS:  ${{ needs.train-xgboost.result }}
           LGB_STATUS:  ${{ needs.train-lightgbm.result }}
