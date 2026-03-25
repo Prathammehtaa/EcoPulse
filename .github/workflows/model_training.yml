@@ -135,19 +135,36 @@ jobs:
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
         run: |
-          if [ -n "$DVC_REMOTE_URL" ] && [ -f ".dvc/config" ]; then
-            echo "DVC remote configured — pulling processed data..."
-            pip install "dvc[s3]" --quiet
-            dvc remote modify --global myremote url "$DVC_REMOTE_URL"
-            dvc pull Data_Pipeline/data/processed/ --run-cache || {
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
+            echo "GCP credentials present — pulling processed data from GCS..."
+            pip install "dvc[gs]" --quiet
+            dvc pull \
+              Data_Pipeline/data/processed/train_balanced.csv.dvc \
+              Data_Pipeline/data/processed/val_balanced.csv.dvc \
+              Data_Pipeline/data/processed/test_balanced.csv.dvc || {
               echo "::warning::DVC pull failed — falling back to committed data"
             }
           else
-            echo "::notice::No DVC remote configured — using committed/cached data"
+            echo "::notice::No GCP credentials configured — using committed/cached data"
           fi
+
+      - name: Convert CSV splits to parquet
+        run: |
+          python3 - << 'PYEOF'
+          import pandas as pd, os
+          processed = "Data_Pipeline/data/processed"
+          for split in ("train", "val", "test"):
+              csv_path     = os.path.join(processed, f"{split}_balanced.csv")
+              parquet_path = os.path.join(processed, f"{split}_split.parquet")
+              if os.path.exists(csv_path) and not os.path.exists(parquet_path):
+                  print(f"Converting {csv_path} -> {parquet_path}")
+                  pd.read_csv(csv_path).to_parquet(parquet_path, index=False)
+              elif os.path.exists(parquet_path):
+                  print(f"Parquet already present: {parquet_path}")
+              else:
+                  print(f"::warning::Neither CSV nor parquet found for {split}")
+          PYEOF
 
       - name: Verify training data
         run: |
@@ -251,19 +268,36 @@ jobs:
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
         run: |
-          if [ -n "$DVC_REMOTE_URL" ] && [ -f ".dvc/config" ]; then
-            echo "DVC remote configured — pulling processed data..."
-            pip install "dvc[s3]" --quiet
-            dvc remote modify --global myremote url "$DVC_REMOTE_URL"
-            dvc pull Data_Pipeline/data/processed/ --run-cache || {
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
+            echo "GCP credentials present — pulling processed data from GCS..."
+            pip install "dvc[gs]" --quiet
+            dvc pull \
+              Data_Pipeline/data/processed/train_balanced.csv.dvc \
+              Data_Pipeline/data/processed/val_balanced.csv.dvc \
+              Data_Pipeline/data/processed/test_balanced.csv.dvc || {
               echo "::warning::DVC pull failed — falling back to committed data"
             }
           else
-            echo "::notice::No DVC remote configured — using committed/cached data"
+            echo "::notice::No GCP credentials configured — using committed/cached data"
           fi
+
+      - name: Convert CSV splits to parquet
+        run: |
+          python3 - << 'PYEOF'
+          import pandas as pd, os
+          processed = "Data_Pipeline/data/processed"
+          for split in ("train", "val", "test"):
+              csv_path     = os.path.join(processed, f"{split}_balanced.csv")
+              parquet_path = os.path.join(processed, f"{split}_split.parquet")
+              if os.path.exists(csv_path) and not os.path.exists(parquet_path):
+                  print(f"Converting {csv_path} -> {parquet_path}")
+                  pd.read_csv(csv_path).to_parquet(parquet_path, index=False)
+              elif os.path.exists(parquet_path):
+                  print(f"Parquet already present: {parquet_path}")
+              else:
+                  print(f"::warning::Neither CSV nor parquet found for {split}")
+          PYEOF
 
       - name: Verify training data
         run: |
@@ -363,14 +397,31 @@ jobs:
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
         run: |
-          if [ -n "$DVC_REMOTE_URL" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[s3]" --quiet
-            dvc remote modify --global myremote url "$DVC_REMOTE_URL"
-            dvc pull Data_Pipeline/data/processed/ --run-cache || true
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
+            pip install "dvc[gs]" --quiet
+            dvc pull \
+              Data_Pipeline/data/processed/train_balanced.csv.dvc \
+              Data_Pipeline/data/processed/val_balanced.csv.dvc \
+              Data_Pipeline/data/processed/test_balanced.csv.dvc || true
           fi
+
+      - name: Convert CSV splits to parquet
+        run: |
+          python3 - << 'PYEOF'
+          import pandas as pd, os
+          processed = "Data_Pipeline/data/processed"
+          for split in ("train", "val", "test"):
+              csv_path     = os.path.join(processed, f"{split}_balanced.csv")
+              parquet_path = os.path.join(processed, f"{split}_split.parquet")
+              if os.path.exists(csv_path) and not os.path.exists(parquet_path):
+                  print(f"Converting {csv_path} -> {parquet_path}")
+                  pd.read_csv(csv_path).to_parquet(parquet_path, index=False)
+              elif os.path.exists(parquet_path):
+                  print(f"Parquet already present: {parquet_path}")
+              else:
+                  print(f"::warning::Neither CSV nor parquet found for {split}")
+          PYEOF
 
       - name: Verify training data
         run: |
@@ -436,6 +487,9 @@ jobs:
       (needs.train-xgboost.result  == 'success' ||
        needs.train-lightgbm.result == 'success')
 
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -450,16 +504,40 @@ jobs:
       - name: Install dependencies
         run: pip install -r Model_Pipeline/requirements.txt
 
+      # ── GCP authentication (needed for DVC pull from GCS) ───
+      - name: Authenticate to GCP
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       # ── Restore training data ───────────────────────────────
       - name: Pull training data (DVC)
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
         run: |
-          if [ -n "$DVC_REMOTE_URL" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[s3]" --quiet
-            dvc remote modify --global myremote url "$DVC_REMOTE_URL"
-            dvc pull Data_Pipeline/data/processed/ --run-cache || true
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
+            pip install "dvc[gs]" --quiet
+            dvc pull \
+              Data_Pipeline/data/processed/train_balanced.csv.dvc \
+              Data_Pipeline/data/processed/val_balanced.csv.dvc \
+              Data_Pipeline/data/processed/test_balanced.csv.dvc || true
           fi
+
+      - name: Convert CSV splits to parquet
+        run: |
+          python3 - << 'PYEOF'
+          import pandas as pd, os
+          processed = "Data_Pipeline/data/processed"
+          for split in ("train", "val", "test"):
+              csv_path     = os.path.join(processed, f"{split}_balanced.csv")
+              parquet_path = os.path.join(processed, f"{split}_split.parquet")
+              if os.path.exists(csv_path) and not os.path.exists(parquet_path):
+                  print(f"Converting {csv_path} -> {parquet_path}")
+                  pd.read_csv(csv_path).to_parquet(parquet_path, index=False)
+              elif os.path.exists(parquet_path):
+                  print(f"Parquet already present: {parquet_path}")
+              else:
+                  print(f"::warning::Neither CSV nor parquet found for {split}")
+          PYEOF
 
       - name: Verify training data
         run: |
@@ -587,6 +665,9 @@ jobs:
       (needs.train-xgboost.result  == 'success' ||
        needs.train-lightgbm.result == 'success')
 
+    env:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -601,15 +682,39 @@ jobs:
       - name: Install dependencies
         run: pip install -r Model_Pipeline/requirements.txt
 
+      # ── GCP authentication (needed for DVC pull from GCS) ───
+      - name: Authenticate to GCP
+        if: env.GCP_SA_KEY != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - name: Pull training data (DVC)
-        env:
-          DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
         run: |
-          if [ -n "$DVC_REMOTE_URL" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[s3]" --quiet
-            dvc remote modify --global myremote url "$DVC_REMOTE_URL"
-            dvc pull Data_Pipeline/data/processed/ --run-cache || true
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
+            pip install "dvc[gs]" --quiet
+            dvc pull \
+              Data_Pipeline/data/processed/train_balanced.csv.dvc \
+              Data_Pipeline/data/processed/val_balanced.csv.dvc \
+              Data_Pipeline/data/processed/test_balanced.csv.dvc || true
           fi
+
+      - name: Convert CSV splits to parquet
+        run: |
+          python3 - << 'PYEOF'
+          import pandas as pd, os
+          processed = "Data_Pipeline/data/processed"
+          for split in ("train", "val", "test"):
+              csv_path     = os.path.join(processed, f"{split}_balanced.csv")
+              parquet_path = os.path.join(processed, f"{split}_split.parquet")
+              if os.path.exists(csv_path) and not os.path.exists(parquet_path):
+                  print(f"Converting {csv_path} -> {parquet_path}")
+                  pd.read_csv(csv_path).to_parquet(parquet_path, index=False)
+              elif os.path.exists(parquet_path):
+                  print(f"Parquet already present: {parquet_path}")
+              else:
+                  print(f"::warning::Neither CSV nor parquet found for {split}")
+          PYEOF
 
       - name: Verify training data
         run: |
