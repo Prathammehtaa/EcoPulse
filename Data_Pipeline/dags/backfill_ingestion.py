@@ -34,6 +34,7 @@ from merge_and_features import main as merge_features_main
 from schema_validation_task import run_tfdv_schema_validation
 from alerts import get_recipients, notify_task_failure, notify_dag_failure, make_success_slack_callable
 
+from airflow.utils.email import send_email
 
 default_args = {
     "owner": "ecopulse",
@@ -43,6 +44,29 @@ default_args = {
     "on_failure_callback": notify_task_failure,     
     "execution_timeout": timedelta(hours=2),         
 }
+
+def notify_success_email(**context):
+    """
+    Success email using the SAME path as your failure emails:
+    airflow.utils.email.send_email + recipients from alerts.get_recipients()
+    """
+    dag = context.get("dag")
+    dag_id = getattr(dag, "dag_id", "unknown")
+    run_id = context.get("run_id")
+    ts = context.get("ts")
+
+    subject = f"[SUCCESS] EcoPulse Backfill Ingestion Complete | {dag_id}"
+    html_content = f"""
+    <p>Hi team,</p>
+    <p><b>EcoPulse Backfill grid ingestion completed successfully.</b></p>
+    <ul>
+        <li><b>DAG:</b> {dag_id}</li>
+        <li><b>Run ID:</b> {run_id}</li>
+        <li><b>Execution Time:</b> {ts}</li>
+    </ul>
+    <p>Best,<br/>EcoPulse Dev Team</p>
+    """
+    send_email(to=get_recipients(), subject=subject, html_content=html_content)
 
 with DAG(
     dag_id="ecopulse_full_backfill_pipeline",
@@ -120,21 +144,9 @@ with DAG(
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
-    notify_success_email = EmailOperator(
+    email_success = PythonOperator(
         task_id="email_success",
-        to=get_recipients(),
-        subject="EcoPulse Full Backfill Pipeline Complete",
-        html_content="""
-        <p>Hi team,</p>
-        <p>The <b>EcoPulse full historical pipeline</b> has completed successfully.</p>
-        <ul>
-            <li><b>DAG:</b> {{ dag.dag_id }}</li>
-            <li><b>Run ID:</b> {{ run_id }}</li>
-            <li><b>Execution Time:</b> {{ ts }}</li>
-        </ul>
-        <p>Grid + Weather ingestion, preprocessing, merge/features, and validation are complete.</p>
-        <p>Best,<br/>Ecopulse Dev Team</p>
-        """,
+        python_callable=notify_success_email,
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
@@ -142,4 +154,4 @@ with DAG(
 
     start >> [grid_pipeline, weather_pipeline]
     [grid_pipeline, weather_pipeline] >> join_before_merge
-    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> notify_success_email >> end
+    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> email_success >> end

@@ -25,6 +25,9 @@ import optuna
 from optuna.samplers import TPESampler
 import joblib
 from datetime import datetime
+import mlflow
+import mlflow.xgboost
+from mlflow.models.signature import infer_signature
 
 from utils import (
     load_all_splits, prepare_Xy, align_columns,
@@ -32,6 +35,11 @@ from utils import (
     save_results, save_model, ensure_dirs,
     FORECAST_TARGETS, HORIZONS, MODELS_DIR, REPORTS_DIR,
     logger, get_timestamp
+)
+from mlflow_config import (
+    setup_mlflow, build_run_tags, get_performance_tier,
+    log_dataset_info, log_feature_importance_plot,
+    register_model, TUNING_EXPERIMENT_NAME,
 )
 
 # Suppress Optuna's verbose logging
@@ -143,14 +151,27 @@ def tune_horizon(train_df, val_df, test_df, horizon, n_trials=N_TRIALS):
     for split_name in ["train", "val", "test"]:
         print_metrics(results[split_name], f"    {split_name}")
 
+    # Feature importance for the retrained model
+    importance_df = pd.DataFrame({
+        "feature":    feature_cols,
+        "importance": final_model.feature_importances_
+    }).sort_values("importance", ascending=False)
+
+    # Small sample for MLflow signature and input_example
+    X_sample  = X_train.iloc[:50]
+    signature = infer_signature(X_sample, final_model.predict(X_sample))
+
     return {
-        "model": final_model,
-        "results": results,
-        "best_params": best_params,
+        "model":        final_model,
+        "results":      results,
+        "best_params":  best_params,
         "best_val_mae": study.best_value,
-        "study": study,
+        "study":        study,
         "feature_cols": feature_cols,
-        "horizon": horizon,
+        "horizon":      horizon,
+        "importance":   importance_df,
+        "signature":    signature,
+        "X_sample":     X_sample,
     }
 
 
@@ -164,29 +185,93 @@ def run_tuning():
     splits = load_all_splits()
     train, val, test = splits["train"], splits["val"], splits["test"]
 
+    # MLflow setup for the tuning experiment (separate from training runs)
+    setup_mlflow(TUNING_EXPERIMENT_NAME)
+
     ensure_dirs()
     all_results = []
-    all_params = {}
+    all_params  = {}
+    timestamp   = get_timestamp()
 
     # Original XGBoost results for comparison
     original_mae = {1: 25.14, 6: 34.34, 12: 39.97, 24: 43.01}
 
-    for horizon in HORIZONS:
-        print(f"\n{'='*80}")
-        print(f"  TUNING: {horizon}h HORIZON")
-        print(f"{'='*80}")
+    # Parent run groups all horizon tuning into one session
+    with mlflow.start_run(run_name=f"optuna_all_{timestamp}"):
+        mlflow.set_tags({
+            "model_type":    "xgboost_tuned",
+            "tuner":         "optuna",
+            "n_trials":      str(N_TRIALS),
+            "horizons":      ",".join(str(h) for h in HORIZONS),
+            "project":       "ecopulse",
+        })
+        mlflow.log_param("n_trials", N_TRIALS)
 
-        result = tune_horizon(train, val, test, horizon)
+        for horizon in HORIZONS:
+            print(f"\n{'='*80}")
+            print(f"  TUNING: {horizon}h HORIZON")
+            print(f"{'='*80}")
 
-        # Save tuned model
-        save_model(result["model"], f"xgboost_tuned_{horizon}h")
+            with mlflow.start_run(run_name=f"optuna_{horizon}h_{timestamp}", nested=True):
+                # Tags
+                mlflow.set_tags(build_run_tags(
+                    "xgboost_tuned", horizon,
+                    tuner="optuna",
+                    n_trials=str(N_TRIALS),
+                ))
 
-        # Collect results
-        test_metrics = result["results"]["test"].copy()
-        test_metrics["model"] = f"XGBoost Tuned ({horizon}h)"
-        test_metrics["horizon"] = horizon
-        all_results.append(test_metrics)
-        all_params[horizon] = result["best_params"]
+                # Dataset provenance
+                log_dataset_info(train, val, test)
+                mlflow.log_param("n_trials",        N_TRIALS)
+                mlflow.log_param("forecast_horizon", horizon)
+
+                # Run tuning
+                result = tune_horizon(train, val, test, horizon)
+
+                # Best hyperparameters (exclude non-loggable fixed params)
+                loggable_params = {
+                    k: v for k, v in result["best_params"].items()
+                    if k not in ["random_state", "n_jobs", "early_stopping_rounds"]
+                }
+                mlflow.log_params(loggable_params)
+                mlflow.log_metric("optuna_best_val_mae", result["best_val_mae"])
+                mlflow.log_metric("n_features", len(result["feature_cols"]))
+
+                # Split metrics
+                for split_name, metrics in result["results"].items():
+                    for metric_name, value in metrics.items():
+                        mlflow.log_metric(f"{split_name}_{metric_name}", value)
+
+                # Performance tier
+                tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
+                mlflow.set_tag("perf_tier", tier)
+
+                # Feature importance plot
+                log_feature_importance_plot(
+                    result["importance"], horizon, "xgboost_tuned", REPORTS_DIR
+                )
+
+                # Log model artifact with signature
+                mlflow.xgboost.log_model(
+                    result["model"],
+                    artifact_path=f"xgboost_tuned_{horizon}h",
+                    signature=result["signature"],
+                    input_example=result["X_sample"],
+                )
+
+                # Opt-in registry
+                run_id = mlflow.active_run().info.run_id
+                register_model(run_id, f"xgboost_tuned_{horizon}h", horizon, "xgboost_tuned")
+
+            # Save tuned model locally (outside MLflow context, unchanged)
+            save_model(result["model"], f"xgboost_tuned_{horizon}h")
+
+            # Collect results
+            test_metrics = result["results"]["test"].copy()
+            test_metrics["model"] = f"XGBoost Tuned ({horizon}h)"
+            test_metrics["horizon"] = horizon
+            all_results.append(test_metrics)
+            all_params[horizon] = result["best_params"]
 
     # Summary
     print(f"\n{'='*80}")

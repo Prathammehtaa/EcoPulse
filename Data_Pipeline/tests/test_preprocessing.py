@@ -6,7 +6,7 @@ import sys
 import os
 from pathlib import Path
 
-# Add src directory to path
+# Add src directory to path FIRST
 current_file = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file)
 project_root = os.path.dirname(current_dir)
@@ -17,6 +17,8 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
+
+# NOW import from local modules
 from grid_preprocessing import (
     remove_duplicates,
     fill_timeline_gaps,

@@ -59,8 +59,11 @@ x-airflow-common:
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/secrets/gcp-sa.json
+    GOOGLE_CLOUD_PROJECT: github-gcp-lab-486021
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__EMAIL__EMAIL_CONN_ID: email_notif
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -86,10 +89,11 @@ x-airflow-common:
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/pipeline_config:/opt/airflow/pipeline_config
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/src:/opt/airflow/src
     - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/gcp-sa.json:/opt/airflow/secrets/gcp-sa.json:ro
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

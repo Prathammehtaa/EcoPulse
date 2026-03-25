@@ -1,0 +1,90 @@
+
+electricitymaps:
+  base_url: "https://api.electricitymaps.com"
+  token: "o3ZjQ0d1U7tC24Ax2E6y" 
+
+ingestion:
+  signals:
+    - carbon-intensity
+    - carbon-free-energy
+    - electricity-source
+    - electricity-flows
+    - electricity-mix
+    - electricity-source
+    - carbon-intensity-fossil-only
+    - net-load
+    - renewable-energy
+    - total-load
+    - total-reported-load
+
+  electricity_sources:
+    - nuclear
+    - geothermal
+    - biomass
+    - coal
+    - gas
+    - oil
+    - hydro
+    - hydro-discharge
+    - wind
+    - solar
+    - battery-discharge
+
+
+  zones:
+    - US-NW-PACW
+    - US-MIDA-PJM
+
+  endpoint_template: "/v3/{signal}/past-range"
+
+  start: "2023-01-01T00:00:00Z"
+  end: "2026-01-01T00:00:00Z"
+  chunk_days: 10
+
+  static_params:
+    temporalGranularity: "hourly"
+
+pipeline:
+  mode: "hourly"
+
+gcs:
+  bucket: "ecopulse"
+  raw_prefix: "raw"
+
+# Global Weather API Settings
+openmeteo:
+  base_url: "https://archive-api.open-meteo.com/v1/archive"
+  static_params:
+    daily: "weather_code"
+
+# Regional Configurations
+locations:
+  - name: "northern_virginia"
+    latitude: 39.0465
+    longitude: -77.2997
+    timezone: "America/New_York"
+  - name: "portland_oregon"
+    latitude: 45.5234
+    longitude: -122.6762
+    timezone: "America/Los_Angeles"
+
+# Ingestion Logic Settings
+ingestion_weather:
+  start: "2023-01-01Z"
+  end: "2025-12-31Z"
+  chunk_days: 30  # Updated to 30 days as requested
+  signals:
+    - "temperature_2m"
+    - "relative_humidity_2m"
+    - "rain"
+    - "snowfall"
+    - "wind_speed_10m"
+    - "wind_speed_100m"
+    - "cloud_cover"
+    - "weather_code"
+    - "precipitation"
+    - "pressure_msl"
+    - "surface_pressure"
+    - "shortwave_radiation"
+    - "vapour_pressure_deficit"
+    - "direct_radiation"

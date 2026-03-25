@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pandas numpy pyyaml
+        pip install pytest pandas numpy pyyaml pyarrow google-cloud-storage
     
     - name: Run preprocessing tests
       run: |
