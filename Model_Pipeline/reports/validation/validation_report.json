@@ -1,0 +1,242 @@
+{
+  "1h": {
+    "metrics": {
+      "val": {
+        "mae": 18.3238,
+        "rmse": 25.3915,
+        "r2": 0.9549,
+        "mape": 6.489
+      },
+      "test": {
+        "mae": 21.6165,
+        "rmse": 29.9633,
+        "r2": 0.9215,
+        "mape": 7.9108,
+        "baseline_mae": 57.48,
+        "mae_improvement_pct": 62.39
+      }
+    },
+    "top_shap_features": [
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_mean_4h",
+        "mean_shap": 28.7801
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_4h",
+        "mean_shap": 28.6889
+      },
+      {
+        "feature": "clean_energy_score",
+        "mean_shap": 19.5007
+      },
+      {
+        "feature": "carbon_free_energy_pct",
+        "mean_shap": 12.5293
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_max_4h",
+        "mean_shap": 8.4596
+      },
+      {
+        "feature": "carbon_change_1h",
+        "mean_shap": 6.4924
+      },
+      {
+        "feature": "hour_sin",
+        "mean_shap": 6.1012
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_24h",
+        "mean_shap": 5.2501
+      },
+      {
+        "feature": "hour_of_day",
+        "mean_shap": 5.2288
+      },
+      {
+        "feature": "carbon_intensity_fossil_gco2_per_kwh",
+        "mean_shap": 4.0368
+      }
+    ]
+  },
+  "6h": {
+    "metrics": {
+      "val": {
+        "mae": 25.6754,
+        "rmse": 35.2725,
+        "r2": 0.9126,
+        "mape": 9.2028
+      },
+      "test": {
+        "mae": 31.4158,
+        "rmse": 43.1204,
+        "r2": 0.8377,
+        "mape": 11.665,
+        "baseline_mae": 71.33,
+        "mae_improvement_pct": 55.96
+      }
+    },
+    "top_shap_features": [
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_mean_24h",
+        "mean_shap": 43.3666
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_24h",
+        "mean_shap": 18.6351
+      },
+      {
+        "feature": "hour_of_day",
+        "mean_shap": 9.244
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_max_24h",
+        "mean_shap": 9.0865
+      },
+      {
+        "feature": "carbon_free_energy_pct",
+        "mean_shap": 7.8257
+      },
+      {
+        "feature": "hour_cos",
+        "mean_shap": 7.35
+      },
+      {
+        "feature": "clean_energy_score",
+        "mean_shap": 6.935
+      },
+      {
+        "feature": "carbon_change_1h",
+        "mean_shap": 6.2443
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_4h",
+        "mean_shap": 6.001
+      },
+      {
+        "feature": "shortwave_radiation_wm2",
+        "mean_shap": 4.5351
+      }
+    ]
+  },
+  "12h": {
+    "metrics": {
+      "val": {
+        "mae": 28.6476,
+        "rmse": 39.1629,
+        "r2": 0.8922,
+        "mape": 10.2954
+      },
+      "test": {
+        "mae": 36.8316,
+        "rmse": 49.8001,
+        "r2": 0.7841,
+        "mape": 13.8117,
+        "baseline_mae": 76.36,
+        "mae_improvement_pct": 51.77
+      }
+    },
+    "top_shap_features": [
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_mean_24h",
+        "mean_shap": 40.1211
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_12h",
+        "mean_shap": 16.6685
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_24h",
+        "mean_shap": 15.2815
+      },
+      {
+        "feature": "hour_of_day",
+        "mean_shap": 9.2845
+      },
+      {
+        "feature": "hour_cos",
+        "mean_shap": 7.7074
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_max_24h",
+        "mean_shap": 5.7527
+      },
+      {
+        "feature": "hour_sin",
+        "mean_shap": 5.4566
+      },
+      {
+        "feature": "carbon_intensity_fossil_gco2_per_kwh",
+        "mean_shap": 4.9911
+      },
+      {
+        "feature": "carbon_change_1h",
+        "mean_shap": 4.7284
+      },
+      {
+        "feature": "total_load_mw_std_4h",
+        "mean_shap": 4.3617
+      }
+    ]
+  },
+  "24h": {
+    "metrics": {
+      "val": {
+        "mae": 31.8968,
+        "rmse": 43.8455,
+        "r2": 0.8643,
+        "mape": 11.2522
+      },
+      "test": {
+        "mae": 40.41,
+        "rmse": 53.6532,
+        "r2": 0.7502,
+        "mape": 15.4423,
+        "baseline_mae": 68.79,
+        "mae_improvement_pct": 41.26
+      }
+    },
+    "top_shap_features": [
+      {
+        "feature": "clean_energy_score",
+        "mean_shap": 30.0777
+      },
+      {
+        "feature": "renewable_energy_pct",
+        "mean_shap": 24.6294
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_min_4h",
+        "mean_shap": 10.6991
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_max_24h",
+        "mean_shap": 8.9082
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_mean_24h",
+        "mean_shap": 8.0381
+      },
+      {
+        "feature": "carbon_intensity_gco2_per_kwh_max_12h",
+        "mean_shap": 7.2044
+      },
+      {
+        "feature": "hour_of_day",
+        "mean_shap": 5.6097
+      },
+      {
+        "feature": "carbon_change_1h",
+        "mean_shap": 4.0483
+      },
+      {
+        "feature": "hour_sin",
+        "mean_shap": 3.9907
+      },
+      {
+        "feature": "carbon_free_energy_pct",
+        "mean_shap": 3.4837
+      }
+    ]
+  }
+}
