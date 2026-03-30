@@ -19,7 +19,6 @@ stages:
       - data/processed/weather_data_processed.parquet
     outs:
       - data/processed/merged_dataset.parquet
-      - data/processed/raw_combined.parquet
 
   feature_engineering:
     cmd: python src/feature_engineering.py
@@ -55,7 +54,7 @@ stages:
       - src/bias_mitigation.py
       - data/features/feature_table.parquet
     outs:
-      - data/processed/train_balanced.csv
-      - data/processed/val_balanced.csv
-      - data/processed/test_balanced.csv
+      - data/processed/train_balanced.parquet
+      - data/processed/val_balanced.paruet
+      - data/processed/test_balanced.parquet
       - reports/bias_mitigation/mitigation_report.json

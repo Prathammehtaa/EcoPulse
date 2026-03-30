@@ -48,20 +48,13 @@ def merge_datasets(grid, weather):
 def run_merge(config, use_gcs=True):
     if use_gcs:
         proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
-        feat_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['features']}"
     else:
         proc_dir = PROJECT_ROOT / config["local"]["processed"]
-        feat_dir = PROJECT_ROOT / config["local"]["features"]
-        os.makedirs(feat_dir, exist_ok=True)
+
 
     grid_path = os.path.join(proc_dir, config["output"]["files"]["grid_processed"])
     weather_path = os.path.join(proc_dir, config["output"]["files"]["weather_processed"])
     merged_path = os.path.join(proc_dir, config["output"]["files"]["merged"])
-    feature_path = os.path.join(feat_dir, config["output"]["files"]["feature_table"])
-
-    target = config["features"]["target_column"]
-    lags = config["features"]["lag_hours"]
-    windows = config["features"]["rolling_windows"]
 
     # Phase 1: Merge
     logger.info("=" * 60)
