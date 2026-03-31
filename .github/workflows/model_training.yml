@@ -122,6 +122,7 @@ jobs:
       # gcp_registry.push_after_mlflow_log() already handles auth failures
       # without aborting training, so this gate is an early-exit optimisation.
       - name: Authenticate to GCP
+        id: auth
         if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
@@ -132,6 +133,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
@@ -255,6 +260,7 @@ jobs:
 
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
+        id: auth
         if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
@@ -265,6 +271,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
@@ -384,6 +394,7 @@ jobs:
 
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
+        id: auth
         if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
@@ -394,6 +405,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
@@ -506,10 +521,15 @@ jobs:
 
       # ── GCP authentication (needed for DVC pull from GCS) ───
       - name: Authenticate to GCP
+        id: auth
         if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── Restore training data ───────────────────────────────
       - name: Pull training data (DVC)
@@ -684,10 +704,15 @@ jobs:
 
       # ── GCP authentication (needed for DVC pull from GCS) ───
       - name: Authenticate to GCP
+        id: auth
         if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       - name: Pull training data (DVC)
         run: |
