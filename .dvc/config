@@ -1,4 +1,6 @@
 [core]
-    remote = gcs_remote
+    remote = shared
 ['remote "gcs_remote"']
     url = gs://ecopulse-kapish/dvc-store
+['remote "shared"']
+    url = gs://ecopulse-dvc-store/files
