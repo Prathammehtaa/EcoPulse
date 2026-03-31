@@ -17,7 +17,7 @@
 #
 # Required secrets:
 #   SLACK_WEBHOOK_URL     Incoming webhook for Slack notifications
-#   GCP_SA_KEY            GCP service-account key JSON (base64-encoded).
+#   GCP_SA_KEY_PRATHAM            GCP service-account key JSON (base64-encoded).
 #                         Enables push to Artifact Registry (ecopulse-models).
 #                         Without this secret the GCP push is skipped gracefully.
 #
@@ -71,7 +71,7 @@ env:
   MLFLOW_TRACKING_URI: >-
     ${{ secrets.MLFLOW_TRACKING_URI ||
         format('sqlite:///{0}/Model_Pipeline/mlruns/mlflow.db', github.workspace) }}
-  # GCP Artifact Registry — push models after training (requires GCP_SA_KEY secret)
+  # GCP Artifact Registry — push models after training (requires GCP_SA_KEY_PRATHAM secret)
   GCP_PUSH_MODELS: "1"
   GCP_PROJECT_ID: "ecopulse-mlops-pratham"
   GCP_REGISTRY_LOCATION: "us-central1"
@@ -99,7 +99,7 @@ jobs:
     # Secrets cannot be read in `if` conditions — expose as env vars instead
     # so step-level `if: env.VAR != ''` works correctly.
     env:
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
     steps:
       # ── 1. Source code ──────────────────────────────────────
@@ -118,24 +118,24 @@ jobs:
         run: pip install -r Model_Pipeline/requirements.txt
 
       # ── 3. GCP authentication ────────────────────────────────
-      # Skipped gracefully when GCP_SA_KEY secret is not configured.
+      # Skipped gracefully when GCP_SA_KEY_PRATHAM secret is not configured.
       # gcp_registry.push_after_mlflow_log() already handles auth failures
       # without aborting training, so this gate is an early-exit optimisation.
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
@@ -242,7 +242,7 @@ jobs:
       inputs.model_type == 'both'
 
     env:
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
     steps:
       - name: Checkout repository
@@ -261,19 +261,19 @@ jobs:
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
@@ -376,7 +376,7 @@ jobs:
       inputs.model_type == 'tune'
 
     env:
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
     steps:
       - name: Checkout repository
@@ -395,19 +395,19 @@ jobs:
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
@@ -503,7 +503,7 @@ jobs:
        needs.train-lightgbm.result == 'success')
 
     env:
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
     steps:
       - name: Checkout repository
@@ -522,13 +522,13 @@ jobs:
       # ── GCP authentication (needed for DVC pull from GCS) ───
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── Restore training data ───────────────────────────────
@@ -686,7 +686,7 @@ jobs:
        needs.train-lightgbm.result == 'success')
 
     env:
-      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
     steps:
       - name: Checkout repository
@@ -705,13 +705,13 @@ jobs:
       # ── GCP authentication (needed for DVC pull from GCS) ───
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY != ''
+        if: env.GCP_SA_KEY_PRATHAM != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       - name: Pull training data (DVC)
