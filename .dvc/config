@@ -1,6 +1,4 @@
 [core]
-    remote = shared
-['remote "gcs_remote"']
-    url = gs://ecopulse-kapish/dvc-store
-['remote "shared"']
-    url = gs://ecopulse-dvc-store/files
+    remote = pratham
+['remote "pratham"']
+    url = gs://ecopulse-pratham-data
