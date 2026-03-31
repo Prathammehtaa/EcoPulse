@@ -1,4 +1,4 @@
 [core]
     remote = gcs_remote
 ['remote "gcs_remote"']
-    url = gs://ecopulse/dvc-store
+    url = gs://ecopulse-dvc-store
