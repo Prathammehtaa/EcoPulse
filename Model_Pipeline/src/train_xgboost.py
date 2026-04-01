@@ -34,6 +34,15 @@ from mlflow_config import (
     TRAINING_EXPERIMENT_NAME,
 )
 
+# GCP Artifact Registry push — opt-in via GCP_PUSH_MODELS=1
+_GCP_PUSH = os.getenv("GCP_PUSH_MODELS", "0") == "1"
+if _GCP_PUSH:
+    try:
+        from gcp_registry import push_after_mlflow_log, make_version_string
+    except ImportError:
+        logger.warning("gcp_registry imports failed — GCP push disabled for this run")
+        _GCP_PUSH = False
+
 # ============================================================
 # XGBOOST HYPERPARAMETERS
 # ============================================================
@@ -222,6 +231,20 @@ def train_all_horizons():
                 # --- Opt-in model registry ---
                 run_id = mlflow.active_run().info.run_id
                 register_model(run_id, f"xgboost_{horizon}h", horizon, "xgboost")
+
+                # --- GCP Artifact Registry push (opt-in via GCP_PUSH_MODELS=1) ---
+                if _GCP_PUSH:
+                    push_after_mlflow_log(
+                        model_path=os.path.join(MODELS_DIR, f"xgboost_{horizon}h.joblib"),
+                        model_name=f"xgboost_{horizon}h",
+                        version=make_version_string("xgboost", horizon),
+                        mlflow_run_id=run_id,
+                        horizon=horizon,
+                        model_type="xgboost",
+                        metrics=result["results"]["test"],
+                        performance_tier=tier,
+                        auto_promote=True,
+                    )
 
                 # --- Collect test results for summary ---
                 test_metrics          = result["results"]["test"].copy()
