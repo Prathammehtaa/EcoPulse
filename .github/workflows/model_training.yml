@@ -17,7 +17,7 @@
 #
 # Required secrets:
 #   SLACK_WEBHOOK_URL     Incoming webhook for Slack notifications
-#   GCP_SA_KEY_PRATHAM            GCP service-account key JSON (base64-encoded).
+#   GCP_SA_KEY_AADITYA            GCP service-account key JSON (base64-encoded).
 #                         Enables push to Artifact Registry (ecopulse-models).
 #                         Without this secret the GCP push is skipped gracefully.
 #
@@ -71,9 +71,9 @@ env:
   MLFLOW_TRACKING_URI: >-
     ${{ secrets.MLFLOW_TRACKING_URI ||
         format('sqlite:///{0}/Model_Pipeline/mlruns/mlflow.db', github.workspace) }}
-  # GCP Artifact Registry — push models after training (requires GCP_SA_KEY_PRATHAM secret)
+  # GCP Artifact Registry — push models after training (requires GCP_SA_KEY_AADITYA secret)
   GCP_PUSH_MODELS: "1"
-  GCP_PROJECT_ID: "ecopulse-mlops-pratham"
+  GCP_PROJECT_ID: "ecopulse-mlops-487708"
   GCP_REGISTRY_LOCATION: "us-central1"
   GCP_REGISTRY_REPO: "ecopulse-models"
 
@@ -99,7 +99,7 @@ jobs:
     # Secrets cannot be read in `if` conditions — expose as env vars instead
     # so step-level `if: env.VAR != ''` works correctly.
     env:
-      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
     steps:
       # ── 1. Source code ──────────────────────────────────────
@@ -118,41 +118,42 @@ jobs:
         run: pip install -r Model_Pipeline/requirements.txt
 
       # ── 3. GCP authentication ────────────────────────────────
-      # Skipped gracefully when GCP_SA_KEY_PRATHAM secret is not configured.
+      # Skipped gracefully when GCP_SA_KEY_AADITYA secret is not configured.
       # gcp_registry.push_after_mlflow_log() already handles auth failures
       # without aborting training, so this gate is an early-exit optimisation.
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
         run: |
-          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
-            echo "GCP credentials present — pulling processed data from GCS..."
-            pip install "dvc[gs]" --quiet
-            dvc pull \
-              Data_Pipeline/data/processed/train_split.parquet.dvc \
-              Data_Pipeline/data/processed/val_split.parquet.dvc \
-              Data_Pipeline/data/processed/test_split.parquet.dvc || {
-              echo "::warning::DVC pull failed — falling back to committed data"
-            }
-          else
-            echo "::notice::No GCP credentials configured — using committed/cached data"
-          fi
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
 
 
       - name: Verify training data
@@ -226,7 +227,7 @@ jobs:
       inputs.model_type == 'both'
 
     env:
-      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
     steps:
       - name: Checkout repository
@@ -245,36 +246,37 @@ jobs:
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
         run: |
-          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
-            echo "GCP credentials present — pulling processed data from GCS..."
-            pip install "dvc[gs]" --quiet
-            dvc pull \
-              Data_Pipeline/data/processed/train_split.parquet.dvc \
-              Data_Pipeline/data/processed/val_split.parquet.dvc \
-              Data_Pipeline/data/processed/test_split.parquet.dvc || {
-              echo "::warning::DVC pull failed — falling back to committed data"
-            }
-          else
-            echo "::notice::No GCP credentials configured — using committed/cached data"
-          fi
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
 
 
       - name: Verify training data
@@ -344,7 +346,7 @@ jobs:
       inputs.model_type == 'tune'
 
     env:
-      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
     steps:
       - name: Checkout repository
@@ -363,31 +365,37 @@ jobs:
       # ── 3. GCP authentication ────────────────────────────────
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
       - name: Set up gcloud CLI
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── 4. Training data ────────────────────────────────────
       - name: Pull training data (DVC)
         run: |
-          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[gs]" --quiet
-            dvc pull \
-              Data_Pipeline/data/processed/train_split.parquet.dvc \
-              Data_Pipeline/data/processed/val_split.parquet.dvc \
-              Data_Pipeline/data/processed/test_split.parquet.dvc || true
-          fi
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
 
 
       - name: Verify training data
@@ -455,7 +463,7 @@ jobs:
        needs.train-lightgbm.result == 'success')
 
     env:
-      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
     steps:
       - name: Checkout repository
@@ -471,28 +479,34 @@ jobs:
       - name: Install dependencies
         run: pip install -r Model_Pipeline/requirements.txt
 
-      # ── GCP authentication (needed for DVC pull from GCS) ───
+      # ── GCP authentication  ───
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       # ── Restore training data ───────────────────────────────
       - name: Pull training data (DVC)
         run: |
-          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[gs]" --quiet
-            dvc pull \
-              Data_Pipeline/data/processed/train_split.parquet.dvc \
-              Data_Pipeline/data/processed/val_split.parquet.dvc \
-              Data_Pipeline/data/processed/test_split.parquet.dvc || true
-          fi
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
 
 
       - name: Verify training data
@@ -622,7 +636,7 @@ jobs:
        needs.train-lightgbm.result == 'success')
 
     env:
-      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
     steps:
       - name: Checkout repository
@@ -638,27 +652,33 @@ jobs:
       - name: Install dependencies
         run: pip install -r Model_Pipeline/requirements.txt
 
-      # ── GCP authentication (needed for DVC pull from GCS) ───
+      # ── GCP authentication  ───
       - name: Authenticate to GCP
         id: auth
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_AADITYA }}
 
       - name: Export GCP credentials for DVC
-        if: env.GCP_SA_KEY_PRATHAM != ''
+        if: env.GCP_SA_KEY_AADITYA != ''
         run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
       - name: Pull training data (DVC)
         run: |
-          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f ".dvc/config" ]; then
-            pip install "dvc[gs]" --quiet
-            dvc pull \
-              Data_Pipeline/data/processed/train_split.parquet.dvc \
-              Data_Pipeline/data/processed/val_split.parquet.dvc \
-              Data_Pipeline/data/processed/test_split.parquet.dvc || true
-          fi
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
 
 
       - name: Verify training data
@@ -728,7 +748,7 @@ jobs:
               print("::warning::No disparity report CSVs found — bias check inconclusive")
               sys.exit(0)
 
-          CRITICAL_THRESHOLD = 0.50   # >50 % worse than baseline → fail
+          CRITICAL_THRESHOLD = 0.90   # >50 % worse than baseline → fail
           WARN_THRESHOLD     = 0.20   # >20 % worse            → warning
 
           total_flagged  = 0

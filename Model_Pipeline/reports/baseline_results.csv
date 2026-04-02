@@ -7,7 +7,7 @@ mae,rmse,r2,mape,model,horizon,baseline_type
 80.6415,100.4994,0.1183,27.1327,24h-Ago Persistence (6h),6,lag24h_persistence
 85.7562,106.2494,0.0171,29.0334,24h-Ago Persistence (12h),12,lag24h_persistence
 75.2228,93.9125,0.2346,24.8759,24h-Ago Persistence (24h),24,lag24h_persistence
-70.5998,90.0261,0.2909,22.2578,Historical Hourly Mean (1h),1,historical_mean
-75.7774,97.542,0.1694,23.8787,Historical Hourly Mean (6h),6,historical_mean
-76.3555,98.8733,0.1488,24.2145,Historical Hourly Mean (12h),12,historical_mean
-68.793,88.1301,0.3259,21.7627,Historical Hourly Mean (24h),24,historical_mean
+87.7653,108.8856,-0.0373,28.1248,Historical Hourly Mean (1h),1,historical_mean
+92.6824,116.3442,-0.1817,29.4202,Historical Hourly Mean (6h),6,historical_mean
+92.5475,117.3119,-0.1983,29.3953,Historical Hourly Mean (12h),12,historical_mean
+85.5007,106.9359,0.0075,27.5867,Historical Hourly Mean (24h),24,historical_mean

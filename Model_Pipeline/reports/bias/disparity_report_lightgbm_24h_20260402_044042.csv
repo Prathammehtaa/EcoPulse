@@ -1,0 +1,17 @@
+model,horizon,slice_type,slice_value,n_samples,slice_mae,baseline_mae,relative_diff,pct_deviation,flagged
+lightgbm,24,zone,US-MIDA-PJM,2184,30.8623,43.9668,-0.2981,-29.8%,True
+lightgbm,24,zone,US-NW-PACW,2184,57.0714,43.9668,0.2981,+29.8%,True
+lightgbm,24,season,Fall,2928,45.1525,43.9668,0.027,+2.7%,False
+lightgbm,24,season,Winter,1440,41.556,43.9668,-0.0548,-5.5%,False
+lightgbm,24,carbon_bucket,High (350-500),1681,38.2676,43.9668,-0.1296,-13.0%,False
+lightgbm,24,carbon_bucket,Low (100-200),476,50.1721,43.9668,0.1411,+14.1%,False
+lightgbm,24,carbon_bucket,Medium (200-350),1909,49.236,43.9668,0.1198,+12.0%,False
+lightgbm,24,carbon_bucket,Very High (500+),267,30.2925,43.9668,-0.311,-31.1%,True
+lightgbm,24,carbon_bucket,Very Low (0-100),35,50.224,43.9668,0.1423,+14.2%,False
+lightgbm,24,weather_condition,Cold (< 5C),996,36.5246,43.9668,-0.1693,-16.9%,False
+lightgbm,24,weather_condition,Mild (5-20C),3251,46.4838,43.9668,0.0572,+5.7%,False
+lightgbm,24,weather_condition,Hot (>= 20C),121,37.6013,43.9668,-0.1448,-14.5%,False
+lightgbm,24,weather_condition,Windy (>= 10 m/s),3428,42.5819,43.9668,-0.0315,-3.1%,False
+lightgbm,24,weather_condition,Calm (< 10 m/s),940,49.0176,43.9668,0.1149,+11.5%,False
+lightgbm,24,weather_condition,Overcast (>= 75%),2592,48.5432,43.9668,0.1041,+10.4%,False
+lightgbm,24,weather_condition,Clear (< 25%),1147,35.0243,43.9668,-0.2034,-20.3%,True

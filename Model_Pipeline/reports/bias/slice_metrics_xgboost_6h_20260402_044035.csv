@@ -1,0 +1,18 @@
+model,horizon,slice_type,slice_value,n_samples,mae,rmse,r2,mape
+xgboost,6,overall,all,4368,35.5114,46.903,0.8079,12.7811
+xgboost,6,zone,US-MIDA-PJM,2184,26.6083,33.8322,0.7831,6.5099
+xgboost,6,zone,US-NW-PACW,2184,44.4146,57.054,0.5619,19.0524
+xgboost,6,season,Fall,2928,35.971,47.8831,0.7219,11.356
+xgboost,6,season,Winter,1440,34.577,44.844,0.8856,15.6789
+xgboost,6,carbon_bucket,High (350-500),1681,31.266,40.7721,0.7565,8.3596
+xgboost,6,carbon_bucket,Low (100-200),476,38.4297,50.3352,0.3924,21.0025
+xgboost,6,carbon_bucket,Medium (200-350),1909,39.7855,52.1745,0.6868,14.5029
+xgboost,6,carbon_bucket,Very High (500+),267,22.5232,29.8124,0.8655,5.5049
+xgboost,6,carbon_bucket,Very Low (0-100),35,65.6885,70.6541,-0.1982,74.9259
+xgboost,6,weather_condition,Cold (< 5C),996,32.0232,42.5629,0.8475,10.7808
+xgboost,6,weather_condition,Mild (5-20C),3251,36.805,48.4609,0.7707,13.5733
+xgboost,6,weather_condition,Hot (>= 20C),121,29.4693,37.4749,0.8014,7.9628
+xgboost,6,weather_condition,Windy (>= 10 m/s),3428,34.7041,45.9325,0.8205,12.4333
+xgboost,6,weather_condition,Calm (< 10 m/s),940,38.4554,50.2837,0.7354,14.0497
+xgboost,6,weather_condition,Overcast (>= 75%),2592,38.0427,50.2618,0.7821,14.3855
+xgboost,6,weather_condition,Clear (< 25%),1147,31.3406,40.7834,0.8065,9.0509
