@@ -89,7 +89,8 @@ defaults:
 # ================================================================
 # JOB 1 — Train XGBoost
 # ================================================================
-train-xgboost:
+jobs:
+  train-xgboost:
     name: "Train XGBoost"
     needs: [hyperparameter-tune]
     runs-on: ubuntu-latest
