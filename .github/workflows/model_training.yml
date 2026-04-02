@@ -51,6 +51,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_tuning:
+        description: "Run Optuna hyperparameter tuning before training"
+        required: false
+        default: false
+        type: boolean
 
   schedule:
     # Every Monday at 02:00 UTC
@@ -84,17 +89,18 @@ defaults:
 # ================================================================
 # JOB 1 — Train XGBoost
 # ================================================================
-jobs:
-  train-xgboost:
+train-xgboost:
     name: "Train XGBoost"
+    needs: [hyperparameter-tune]
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
-    # Run on: push/schedule (always), or dispatch with xgboost/both
     if: >
-      github.event_name != 'workflow_dispatch' ||
-      inputs.model_type == 'xgboost' ||
-      inputs.model_type == 'both'
+      always() &&
+      (needs.hyperparameter-tune.result == 'success' || needs.hyperparameter-tune.result == 'skipped') &&
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.model_type == 'xgboost' ||
+       inputs.model_type == 'both')
 
     # Secrets cannot be read in `if` conditions — expose as env vars instead
     # so step-level `if: env.VAR != ''` works correctly.
@@ -218,13 +224,16 @@ jobs:
 # ================================================================
   train-lightgbm:
     name: "Train LightGBM"
+    needs: [hyperparameter-tune]
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
     if: >
-      github.event_name != 'workflow_dispatch' ||
-      inputs.model_type == 'lightgbm' ||
-      inputs.model_type == 'both'
+      always() &&
+      (needs.hyperparameter-tune.result == 'success' || needs.hyperparameter-tune.result == 'skipped') &&
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.model_type == 'lightgbm' ||
+       inputs.model_type == 'both')
 
     env:
       GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
@@ -339,11 +348,11 @@ jobs:
   hyperparameter-tune:
     name: "Hyperparameter Tuning (Optuna)"
     runs-on: ubuntu-latest
-    timeout-minutes: 180   # Optuna search over 4 horizons × 50 trials
+    timeout-minutes: 180
 
     if: >
       github.event_name == 'workflow_dispatch' &&
-      inputs.model_type == 'tune'
+      (inputs.model_type == 'tune' || inputs.run_tuning == true)
 
     env:
       GCP_SA_KEY_AADITYA: ${{ secrets.GCP_SA_KEY_AADITYA }}
