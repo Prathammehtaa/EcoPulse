@@ -51,6 +51,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_tuning:
+        description: 'Run hyperparameter tuning before training'
+        required: false
+        type: boolean
+        default: false
 
   schedule:
     # Every Monday at 02:00 UTC
@@ -89,12 +94,16 @@ jobs:
     name: "Train XGBoost"
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    needs: [hyperparameter-tune]
 
-    # Run on: push/schedule (always), or dispatch with xgboost/both
+    # Run on: push/schedule (always), or dispatch with xgboost/both.
+    # Wait for tuning when it runs; skip gracefully when it's skipped.
     if: >
-      github.event_name != 'workflow_dispatch' ||
-      inputs.model_type == 'xgboost' ||
-      inputs.model_type == 'both'
+      !cancelled() &&
+      needs.hyperparameter-tune.result != 'failure' &&
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.model_type == 'xgboost' ||
+       inputs.model_type == 'both')
 
     # Secrets cannot be read in `if` conditions — expose as env vars instead
     # so step-level `if: env.VAR != ''` works correctly.
@@ -219,11 +228,16 @@ jobs:
     name: "Train LightGBM"
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    needs: [hyperparameter-tune]
 
+    # Run on: push/schedule (always), or dispatch with xgboost/both.
+    # Wait for tuning when it runs; skip gracefully when it's skipped.
     if: >
-      github.event_name != 'workflow_dispatch' ||
-      inputs.model_type == 'lightgbm' ||
-      inputs.model_type == 'both'
+      !cancelled() &&
+      needs.hyperparameter-tune.result != 'failure' &&
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.model_type == 'lightgbm' ||
+       inputs.model_type == 'both')
 
     env:
       GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
@@ -341,7 +355,7 @@ jobs:
 
     if: >
       github.event_name == 'workflow_dispatch' &&
-      inputs.model_type == 'tune'
+      inputs.run_tuning == true
 
     env:
       GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
@@ -776,7 +790,7 @@ jobs:
               print(f"::warning::Found {warn_count} moderate bias disparities (>20% worse than baseline)")
           if critical_count > 0:
               for _ in range(critical_count):
-                  print(f"::error::Critical bias disparity detected (>50% worse than baseline)")
+                  print(f"::error::Critical bias disparity detected (>80% worse than baseline)")
               sys.exit(1)
           else:
               print("\n✅ No critical bias disparities detected")
