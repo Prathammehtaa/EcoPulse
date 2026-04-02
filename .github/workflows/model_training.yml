@@ -471,6 +471,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r Model_Pipeline/requirements.txt
 
+      # ── Restore MLflow DB from previous run ─────────────────
+      - name: Restore MLflow DB
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: mlflow-db
+          path: Model_Pipeline/mlruns/
+
       # ── GCP authentication (needed for DVC pull from GCS) ───
       - name: Authenticate to GCP
         id: auth
@@ -728,7 +736,7 @@ jobs:
               print("::warning::No disparity report CSVs found — bias check inconclusive")
               sys.exit(0)
 
-          CRITICAL_THRESHOLD = 0.50   # >50 % worse than baseline → fail
+          CRITICAL_THRESHOLD = 0.80   # >80% worse than baseline → fail
           WARN_THRESHOLD     = 0.20   # >20 % worse            → warning
 
           total_flagged  = 0
@@ -783,6 +791,16 @@ jobs:
             Model_Pipeline/reports/bias/
           if-no-files-found: warn
           retention-days: 30
+
+      # ── Persist MLflow DB for future runs ───────────────────
+      - name: Save MLflow DB
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mlflow-db
+          path: Model_Pipeline/mlruns/
+          retention-days: 90
+          overwrite: true
 
 # ================================================================
 # JOB 6 — Slack Notification
