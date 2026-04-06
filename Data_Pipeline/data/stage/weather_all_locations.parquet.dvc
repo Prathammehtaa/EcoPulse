@@ -1,5 +1,0 @@
-outs:
-- md5: 98de4591326ff705b1607345484a6642
-  size: 408264
-  hash: md5
-  path: weather_all_locations.parquet

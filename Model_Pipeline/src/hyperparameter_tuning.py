@@ -102,6 +102,7 @@ def create_objective(X_train, y_train, X_val, y_val):
 
         preds = model.predict(X_val)
         mae = np.mean(np.abs(y_val - preds))
+        mlflow.log_metric("trial_mae", mae, step=trial.number)
         return mae
 
     return objective
@@ -245,6 +246,8 @@ def run_tuning():
                 mlflow.log_params(loggable_params)
                 mlflow.log_metric("optuna_best_val_mae", result["best_val_mae"])
                 mlflow.log_metric("n_features", len(result["feature_cols"]))
+                mlflow.log_metric("best_trial_number", result["study"].best_trial.number)
+                mlflow.log_metric("best_trial_duration_s", result["study"].best_trial.duration.total_seconds())
 
                 # Split metrics
                 for split_name, metrics in result["results"].items():
@@ -296,6 +299,16 @@ def run_tuning():
             all_results.append(test_metrics)
             all_params[horizon] = result["best_params"]
 
+        # Save best params and log as MLflow artifact (still inside parent run)
+        params_df = pd.DataFrame([
+            {"horizon": h, **{k: v for k, v in p.items()
+             if k not in ["random_state", "n_jobs", "early_stopping_rounds"]}}
+            for h, p in all_params.items()
+        ])
+        params_path = os.path.join(REPORTS_DIR, "best_hyperparameters.csv")
+        params_df.to_csv(params_path, index=False)
+        mlflow.log_artifact(params_path)
+
     # Summary
     print(f"\n{'='*80}")
     print("TUNING SUMMARY (TEST SET)")
@@ -318,15 +331,6 @@ def run_tuning():
 
     # Save results
     save_results(all_results, "tuned_xgboost_results.csv")
-
-    # Save best params
-    params_df = pd.DataFrame([
-        {"horizon": h, **{k: v for k, v in p.items() 
-         if k not in ["random_state", "n_jobs", "early_stopping_rounds"]}}
-        for h, p in all_params.items()
-    ])
-    params_path = os.path.join(REPORTS_DIR, "best_hyperparameters.csv")
-    params_df.to_csv(params_path, index=False)
 
     print(f"\n✅ Hyperparameter tuning complete!")
     print(f"   Tuned models saved to: models/xgboost_tuned_*.joblib")

@@ -70,6 +70,7 @@ from bias_detection import (
     BIAS_REPORTS_DIR,
     DISPARITY_THRESHOLD,
 )
+from mlflow_config import setup_mlflow
 
 warnings.filterwarnings("ignore")
 
@@ -319,12 +320,7 @@ def log_mitigation_to_mlflow(
     horizon: int,
 ) -> None:
     """Log mitigation improvement metrics to MLflow."""
-    mlflow_db = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "mlruns", "mlflow.db"
-    )
-    mlflow.set_tracking_uri(f"sqlite:///{mlflow_db}")
-    mlflow.set_experiment("ecopulse-carbon-forecasting")
+    setup_mlflow()
 
     run_name = f"mitigation_{model_name}_{horizon}h_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 

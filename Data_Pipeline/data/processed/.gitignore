@@ -1,3 +1,6 @@
 /train_balanced.csv
 /val_balanced.csv
 /test_balanced.csv
+/train_split.parquet
+/val_split.parquet
+/test_split.parquet

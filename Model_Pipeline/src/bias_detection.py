@@ -47,6 +47,7 @@ from utils import (
     MODELS_DIR, REPORTS_DIR,
     logger
 )
+from mlflow_config import setup_mlflow
 
 warnings.filterwarnings("ignore")
 
@@ -322,12 +323,7 @@ def log_to_mlflow(
     Log per-slice metrics into the same MLflow experiment used by
     train_xgboost.py and train_lightgbm.py (ecopulse-carbon-forecasting).
     """
-    mlflow_db = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "mlruns", "mlflow.db"
-    )
-    mlflow.set_tracking_uri(f"sqlite:///{mlflow_db}")
-    mlflow.set_experiment("ecopulse-carbon-forecasting")
+    setup_mlflow()
 
     run_name = (f"bias_{model_name}_{horizon}h_"
                 f"{datetime.now().strftime('%Y%m%d_%H%M%S')}")
