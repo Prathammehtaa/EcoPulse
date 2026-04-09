@@ -210,3 +210,8 @@ __marimo__/
 .idea/
 .cfg
 gcp-sa.json
+.DS_Store
+MLflow/
+.DS_Store
+MLflow/
+path/
