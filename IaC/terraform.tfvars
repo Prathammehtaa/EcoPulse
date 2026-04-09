@@ -1,0 +1,9 @@
+project_id             = "ecopulse-492814"
+region                 = "us-central1"
+zone                   = "us-central1-a"
+bucket_name            = "ecopulse-lakehouse"
+artifact_registry_repo = "ecopulse-images"
+cluster_name           = "ecopulse-gke"
+node_pool_name         = "ecopulse-node-pool"
+node_count             = 1
+machine_type           = "e2-standard-2"

@@ -1,0 +1,140 @@
+schema: '2.0'
+stages:
+  preprocessing:
+    cmd: python src/grid_preprocessing.py && python src/weather_preprocessing.py
+    deps:
+    - path: data/raw/grid_signals/backfill/
+      hash: md5
+      md5: 956a598e43934d4ba92aef39e7503604.dir
+      size: 237854472
+      nfiles: 4723
+    - path: data/raw/weather/backfill/
+      hash: md5
+      md5: 14d1d0d2023152cf6686c5b6c23a603c.dir
+      size: 5051881
+      nfiles: 78
+    - path: pipeline_config/preprocessing_config.yaml
+      hash: md5
+      md5: ef2d6e0194835a95b2f4c618d050c416
+      size: 3561
+    - path: src/grid_preprocessing.py
+      hash: md5
+      md5: f5b0b91746a14123e72172e8c46c19b2
+      size: 14568
+    - path: src/weather_preprocessing.py
+      hash: md5
+      md5: 830abd86aa6a11ba97187f47efcafdf8
+      size: 12538
+    outs:
+    - path: data/processed/grid_data_processed.parquet
+      hash: md5
+      md5: 1ae8d9bbbdf64b8475e0d8f1321eb4d9
+      size: 1847417
+    - path: data/processed/weather_data_processed.parquet
+      hash: md5
+      md5: 771a063abcc680fef83d98e0a49a0611
+      size: 583396
+  merge:
+    cmd: python src/merge_and_features.py
+    deps:
+    - path: data/processed/grid_data_processed.parquet
+      hash: md5
+      md5: 1ae8d9bbbdf64b8475e0d8f1321eb4d9
+      size: 1847417
+    - path: data/processed/weather_data_processed.parquet
+      hash: md5
+      md5: 771a063abcc680fef83d98e0a49a0611
+      size: 583396
+    - path: src/merge_and_features.py
+      hash: md5
+      md5: 95ee491ddb085ade6cdf79678613c581
+      size: 2959
+    outs:
+    - path: data/processed/merged_dataset.parquet
+      hash: md5
+      md5: 40eb93950946e870bb5d6cccbd09bb83
+      size: 2119988
+  feature_engineering:
+    cmd: python src/feature_engineering.py
+    deps:
+    - path: data/processed/merged_dataset.parquet
+      hash: md5
+      md5: 40eb93950946e870bb5d6cccbd09bb83
+      size: 2119988
+    - path: src/feature_engineering.py
+      hash: md5
+      md5: 275904ad64ed5f8773741ec55982a623
+      size: 8995
+    outs:
+    - path: data/features/feature_table.parquet
+      hash: md5
+      md5: 94b58cb31f86d3e8a4b8cb65e24f1612
+      size: 15314423
+  label_split:
+    cmd: python src/label_temporal_split.py
+    deps:
+    - path: data/features/feature_table.parquet
+      hash: md5
+      md5: 94b58cb31f86d3e8a4b8cb65e24f1612
+      size: 15314423
+    - path: src/label_temporal_split.py
+      hash: md5
+      md5: c175fac8b0cd8d9d7aa183cf334027af
+      size: 9581
+    outs:
+    - path: data/processed/model_ready.parquet
+      hash: md5
+      md5: 567c2f09e5702d97f8dcc592f964516e
+      size: 15575122
+    - path: data/processed/test_split.parquet
+      hash: md5
+      md5: 9901764d4e70b2b97e2fa4f5986bc4b0
+      size: 1413399
+    - path: data/processed/train_split.parquet
+      hash: md5
+      md5: f66a90c606a9b211c17919b1089fff00
+      size: 13012691
+    - path: data/processed/val_split.parquet
+      hash: md5
+      md5: e8457efd45b12880c9620f0742e81d43
+      size: 1426647
+  bias_analysis:
+    cmd: python src/tfdv_bias_analysis.py
+    deps:
+    - path: data/features/feature_table.parquet
+      hash: md5
+      md5: 94b58cb31f86d3e8a4b8cb65e24f1612
+      size: 15314423
+    - path: src/tfdv_bias_analysis.py
+      hash: md5
+      md5: 00a8f3a9ce8f743f0f85c6bc8ffc7c58
+      size: 15816
+    outs:
+    - path: reports/tfdv_bias/distribution_carbon_intensity_bucket.csv
+      hash: md5
+      md5: 2b226a8cfc0a83576d6e9ed37964720d
+      size: 306
+    - path: reports/tfdv_bias/distribution_hour_of_day.csv
+      hash: md5
+      md5: 864c33492d9c88993d0d277d04df11ec
+      size: 950
+    - path: reports/tfdv_bias/tfdv_bias_report.md
+      hash: md5
+      md5: 3d153400924adc278cb876606c949037
+      size: 4678
+  bias_mitigation:
+    cmd: python src/bias_mitigation.py
+    deps:
+    - path: data/features/feature_table.parquet
+      hash: md5
+      md5: 94b58cb31f86d3e8a4b8cb65e24f1612
+      size: 15314423
+    - path: src/bias_mitigation.py
+      hash: md5
+      md5: 62836793580ef6b3431571c8aebd5ed8
+      size: 5517
+    outs:
+    - path: reports/bias_mitigation/mitigation_report.json
+      hash: md5
+      md5: 34ec6475e82ab75150d12b3ca8b69e58
+      size: 662

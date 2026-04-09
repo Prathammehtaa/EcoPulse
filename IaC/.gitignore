@@ -1,0 +1,10 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+errored.tfstate
+.terraform.lock.hcl
+
+# Credentials
+*.json
