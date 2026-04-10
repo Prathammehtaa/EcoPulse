@@ -88,6 +88,15 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     # Align columns across splits
     X_train, X_val, X_test, feature_cols = align_columns(X_train, X_val, X_test)
 
+    # Fairness-aware sample weights: prioritize rare carbon intensity slices
+    ci = train_df["carbon_intensity_gco2_per_kwh"].loc[y_train.index]
+    sample_weights = np.ones(len(y_train))
+    sample_weights[ci < 100] = 3.0       # 3x weight for Very Low (0-100 gCO2/kWh)
+    sample_weights[(ci >= 100) & (ci < 200)] = 1.5  # 1.5x for Low (100-200)
+    logger.info(f"  Sample weights: Very Low(3x)={int((ci < 100).sum())}, "
+                f"Low(1.5x)={int(((ci >= 100) & (ci < 200)).sum())}, "
+                f"Normal(1x)={int((ci >= 200).sum())}")
+
     logger.info(f"  Features: {len(feature_cols)}, "
                 f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
@@ -95,6 +104,7 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     model = xgb.XGBRegressor(**params)
     model.fit(
         X_train, y_train,
+        sample_weight=sample_weights,
         eval_set=[(X_val, y_val)],
         verbose=50
     )
