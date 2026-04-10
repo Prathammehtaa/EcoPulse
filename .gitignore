@@ -215,3 +215,4 @@ MLflow/
 .DS_Store
 MLflow/
 path/
+Model_Pipeline/mlruns/mlflow.db
