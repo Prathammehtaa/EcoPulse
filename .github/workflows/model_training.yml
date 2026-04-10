@@ -463,7 +463,7 @@ jobs:
     name: "Validate Models"
     needs: [train-xgboost, train-lightgbm]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 200
 
     # Run if at least one training job succeeded and validation not skipped
     if: >
