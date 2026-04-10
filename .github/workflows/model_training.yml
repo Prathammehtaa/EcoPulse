@@ -78,7 +78,7 @@ env:
         format('sqlite:///{0}/Model_Pipeline/mlruns/mlflow.db', github.workspace) }}
   # GCP Artifact Registry — push models after training (requires GCP_SA_KEY_PRATHAM  secret)
   GCP_PUSH_MODELS: "1"
-  GCP_PROJECT_ID: "ecopulse-mlops-487708"
+  GCP_PROJECT_ID: "ecopulse-mlops-pratham"
   GCP_REGISTRY_LOCATION: "us-central1"
   GCP_REGISTRY_REPO: "ecopulse-models"
 

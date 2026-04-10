@@ -1,5 +1,0 @@
-mae,rmse,r2,mape,model,horizon
-21.4215,29.5334,0.9237,7.9657,LightGBM Tuned (1h),1
-31.3903,43.8337,0.8323,12.008,LightGBM Tuned (6h),6
-35.5916,48.5563,0.7947,13.9918,LightGBM Tuned (12h),12
-40.5463,54.6013,0.7413,15.6642,LightGBM Tuned (24h),24

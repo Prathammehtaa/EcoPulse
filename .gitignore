@@ -216,3 +216,8 @@ MLflow/
 MLflow/
 path/
 Model_Pipeline/mlruns/mlflow.db
+Model_Pipeline/models/*.joblib
+Model_Pipeline/mlruns/
+Model_Pipeline/reports/bias/
+Model_Pipeline/reports/*.csv
+Model_Pipeline/reports/*.png
