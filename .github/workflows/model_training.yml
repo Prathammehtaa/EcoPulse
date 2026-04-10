@@ -56,10 +56,17 @@ on:
         required: false
         default: false
         type: boolean
+      trigger:
+        description: "Dispatch trigger source — 'manual' for a normal run, 'drift' for automated drift-triggered retraining"
+        required: false
+        default: "manual"
+        type: string
 
   schedule:
-    # Every Monday at 02:00 UTC
+    # Every Monday at 02:00 UTC — full training run
     - cron: "0 2 * * 1"
+    # Every 6 hours — monitoring-only heartbeat (training jobs skip this cron)
+    - cron: "0 */6 * * *"
 
 # ── Cancel in-progress runs on the same branch for push events ──
 concurrency:
@@ -98,6 +105,7 @@ jobs:
 
     if: >
       always() &&
+      github.event.schedule != '0 */6 * * *' &&
       (needs.hyperparameter-tune.result == 'success' || needs.hyperparameter-tune.result == 'skipped') &&
       (github.event_name != 'workflow_dispatch' ||
        inputs.model_type == 'xgboost' ||
@@ -231,6 +239,7 @@ jobs:
 
     if: >
       always() &&
+      github.event.schedule != '0 */6 * * *' &&
       (needs.hyperparameter-tune.result == 'success' || needs.hyperparameter-tune.result == 'skipped') &&
       (github.event_name != 'workflow_dispatch' ||
        inputs.model_type == 'lightgbm' ||
@@ -1031,3 +1040,624 @@ jobs:
           echo "================================================================"
           echo "  Set SLACK_WEBHOOK_URL secret to enable Slack notifications."
           echo "================================================================"
+
+# ================================================================
+# JOB 7 — Monitor Models  (every 6 h + every push to main)
+# Checks for performance decay and data drift; triggers automated
+# retraining when either check exits with code 1 (critical alert).
+# Training jobs are guarded above so they skip the 6-hourly cron.
+# ================================================================
+  monitor-models:
+    name: "Monitor Models & Detect Drift"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Run on every push to main and on every scheduled execution.
+    # workflow_dispatch events (including trigger=drift) are excluded
+    # so monitoring never blocks a manual or drift-triggered run.
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'schedule'
+
+    # actions:write is required for `gh workflow run` to dispatch
+    # a workflow_dispatch event from within this job.
+    permissions:
+      actions: write
+      contents: read
+
+    env:
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      SLACK_WEBHOOK_URL:  ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      # ── 1. Source code ──────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python environment ───────────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: Model_Pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r Model_Pipeline/requirements.txt
+
+      # ── 3. GCP authentication ────────────────────────────────
+      - name: Authenticate to GCP
+        id: auth
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+
+      - name: Set up gcloud CLI
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
+
+      # ── 4. Training data ────────────────────────────────────
+      - name: Pull training data (DVC)
+        run: |
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
+
+      - name: Verify training data
+        run: |
+          for f in \
+            Data_Pipeline/data/processed/train_split.parquet \
+            Data_Pipeline/data/processed/val_split.parquet \
+            Data_Pipeline/data/processed/test_split.parquet; do
+            [ -f "$f" ] || { echo "::error::Missing: $f"; exit 1; }
+          done
+
+      # ── 5. Restore MLflow DB ─────────────────────────────────
+      # Silently skipped when no prior artifacts exist in this run.
+      # With a remote MLFLOW_TRACKING_URI secret the DB is always
+      # available; without it, monitor.py reports gracefully.
+      - name: Restore MLflow DB (XGBoost runs)
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns-xgboost
+          path: Model_Pipeline/mlruns/
+        continue-on-error: true
+
+      - name: Restore MLflow DB (LightGBM runs)
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns-lightgbm
+          path: Model_Pipeline/mlruns/
+        continue-on-error: true
+
+      # ── 6. Run monitoring and drift detection ───────────────
+      # continue-on-error keeps the job alive so we can read the
+      # outcome in the next step and trigger retraining if needed.
+      - name: Run performance monitor
+        id: monitor
+        run: |
+          mkdir -p Model_Pipeline/reports
+          python Model_Pipeline/src/monitor.py 2>&1 | tee Model_Pipeline/reports/monitor.log
+          exit "${PIPESTATUS[0]}"
+        continue-on-error: true
+
+      - name: Run drift detection
+        id: drift
+        run: |
+          python Model_Pipeline/src/drift_detection.py \
+            --data Data_Pipeline/data/processed/train_split.parquet \
+            2>&1 | tee Model_Pipeline/reports/drift.log
+          exit "${PIPESTATUS[0]}"
+        continue-on-error: true
+
+      # ── 7. Trigger retraining on critical alert ─────────────
+      - name: Trigger retraining on critical alert
+        if: steps.monitor.outcome == 'failure' || steps.drift.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "::warning::Critical monitoring alert — triggering automated retraining"
+          gh workflow run model_training.yml \
+            --repo "${{ github.repository }}" \
+            --field trigger=drift
+
+      # ── 8. Slack notification ────────────────────────────────
+      - name: Send Slack notification
+        if: always() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          MONITOR_OUTCOME:   ${{ steps.monitor.outcome }}
+          DRIFT_OUTCOME:     ${{ steps.drift.outcome }}
+          RUN_URL:           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER:           ${{ github.event_name }}
+          COMMIT_SHA:        ${{ github.sha }}
+          BRANCH:            ${{ github.ref_name }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, sys
+          import urllib.request
+          from datetime import datetime, timezone
+
+          monitor_outcome = os.environ.get("MONITOR_OUTCOME", "skipped")
+          drift_outcome   = os.environ.get("DRIFT_OUTCOME",   "skipped")
+          run_url         = os.environ.get("RUN_URL", "")
+          trigger         = os.environ.get("TRIGGER", "unknown")
+          commit_sha      = os.environ.get("COMMIT_SHA", "")[:7]
+          branch          = os.environ.get("BRANCH", "unknown")
+          timestamp       = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+          monitor_failed = monitor_outcome == "failure"
+          drift_failed   = drift_outcome   == "failure"
+          overall_ok     = not monitor_failed and not drift_failed
+
+          # ── Determine color and header based on outcome ─────────
+          if overall_ok:
+              color       = "good"
+              emoji       = "✅"
+              header_text = "EcoPulse Monitoring — All Systems Healthy"
+          elif monitor_failed and drift_failed:
+              color       = "danger"
+              emoji       = "🚨"
+              header_text = "EcoPulse Monitoring — Critical Decay + Drift Detected"
+          elif monitor_failed:
+              color       = "danger"
+              emoji       = "🚨"
+              header_text = "EcoPulse Monitoring — Critical Performance Decay"
+          else:
+              color       = "warning"
+              emoji       = "⚠️"
+              header_text = "EcoPulse Monitoring — Data Drift Detected"
+
+          # ── Parse monitoring report for per-horizon detail ──────
+          horizon_lines = []
+          try:
+              with open("Model_Pipeline/reports/monitoring_report.json") as f:
+                  rep = json.load(f)
+              for h, h_data in rep.get("horizons", {}).items():
+                  if "current_mae" not in h_data:
+                      continue
+                  st  = h_data["status"].upper()
+                  pct = h_data["pct_change"]
+                  mae = h_data["current_mae"]
+                  ref = h_data.get("comparison_mae")
+                  ref_str = f"{ref:.4f}" if isinstance(ref, float) else "—"
+                  flag = "🔴" if st == "CRITICAL" else ("🟡" if st == "WARNING" else "🟢")
+                  horizon_lines.append(
+                      f"  {flag} *{h}*  MAE={mae:.4f}  ref={ref_str}  Δ{pct:+.1f}%  `{st}`"
+                  )
+          except Exception:
+              pass
+
+          # ── Build body based on outcome ─────────────────────────
+          meta_line = (
+              f"*Trigger:* `{trigger}`   *Branch:* `{branch}`   "
+              f"*Commit:* `{commit_sha}`   *Time:* {timestamp}"
+          )
+
+          if overall_ok:
+              status_lines = [
+                  "✅ Performance monitor: all horizons within normal range",
+                  "✅ Drift detection: no distribution anomalies detected",
+              ]
+              if horizon_lines:
+                  status_lines += ["", "*Horizon detail:*"] + horizon_lines
+              body_text = meta_line + "\n\n" + "\n".join(status_lines)
+
+          else:
+              triggered_by = []
+              if monitor_failed:
+                  triggered_by.append("performance decay (MAE degradation > threshold)")
+              if drift_failed:
+                  triggered_by.append("data drift (> 30% of features anomalous)")
+
+              status_lines = [
+                  f"🚨 *Alert sources:* {', '.join(triggered_by)}",
+                  "⚡ *Action:* Automated retraining has been triggered",
+                  "",
+                  f"  {'🔴' if monitor_failed else '🟢'} Performance monitor: `{monitor_outcome}`",
+                  f"  {'🔴' if drift_failed   else '🟢'} Drift detection:     `{drift_outcome}`",
+              ]
+              if horizon_lines:
+                  status_lines += ["", "*Affected horizons:*"] + horizon_lines
+              body_text = meta_line + "\n\n" + "\n".join(status_lines)
+
+          # ── Build payload with colored attachment ───────────────
+          full_header = f"{emoji} {header_text}"
+          payload = {
+              "text": full_header,
+              "attachments": [
+                  {
+                      "color": color,
+                      "blocks": [
+                          {
+                              "type": "header",
+                              "text": {"type": "plain_text", "text": full_header, "emoji": True},
+                          },
+                          {
+                              "type": "section",
+                              "text": {"type": "mrkdwn", "text": body_text},
+                          },
+                          {"type": "divider"},
+                          {
+                              "type": "context",
+                              "elements": [
+                                  {"type": "mrkdwn", "text": f"<{run_url}|View full run logs →>"}
+                              ],
+                          },
+                      ],
+                  }
+              ],
+          }
+
+          req = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  print(f"Slack response: {resp.status} {resp.read().decode()}")
+          except Exception as e:
+              print(f"::warning::Slack notification failed: {e}")
+              sys.exit(0)
+          PYEOF
+
+      # ── 9. Save MLflow DB artifact ──────────────────────────
+      - name: Save MLflow DB (monitoring run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns-monitoring
+          path: Model_Pipeline/mlruns/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload monitoring reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-monitoring
+          path: |
+            Model_Pipeline/reports/monitoring_report.json
+            Model_Pipeline/reports/drift_report.json
+            Model_Pipeline/reports/train_stats.pb
+            Model_Pipeline/reports/monitor.log
+            Model_Pipeline/reports/drift.log
+          if-no-files-found: warn
+          retention-days: 14
+
+# ================================================================
+# JOB 8 — Retrain on Drift  (workflow_dispatch trigger=drift only)
+# Triggered automatically by the monitor-models job when critical
+# performance decay or data drift is detected.  Runs the full
+# train → validate → promote pipeline and notifies Slack.
+# ================================================================
+  retrain-on-drift:
+    name: "Retrain on Drift"
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      inputs.trigger == 'drift'
+
+    env:
+      GCP_SA_KEY_PRATHAM: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+      SLACK_WEBHOOK_URL:  ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      # ── 1. Source code ──────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python environment ───────────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: Model_Pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r Model_Pipeline/requirements.txt
+
+      # ── 3. GCP authentication ────────────────────────────────
+      - name: Authenticate to GCP
+        id: auth
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PRATHAM }}
+
+      - name: Set up gcloud CLI
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Export GCP credentials for DVC
+        if: env.GCP_SA_KEY_PRATHAM != ''
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
+
+      # ── 4. Training data ────────────────────────────────────
+      - name: Pull training data (DVC)
+        run: |
+          pip install gcsfs --quiet
+          python3 << 'PYEOF'
+          import gcsfs, os
+          os.makedirs("Data_Pipeline/data/processed", exist_ok=True)
+          fs = gcsfs.GCSFileSystem()
+          for f in ["train_split.parquet", "val_split.parquet", "test_split.parquet"]:
+              dest = f"Data_Pipeline/data/processed/{f}"
+              if not os.path.exists(dest):
+                  fs.get(f"ecopulse-aaditya-data/processed/{f}", dest)
+                  print(f"Downloaded {f}")
+              else:
+                  print(f"Already exists: {f}")
+          PYEOF
+
+      - name: Verify training data
+        run: |
+          for f in \
+            Data_Pipeline/data/processed/train_split.parquet \
+            Data_Pipeline/data/processed/val_split.parquet \
+            Data_Pipeline/data/processed/test_split.parquet; do
+            [ -f "$f" ] || { echo "::error::Missing: $f"; exit 1; }
+          done
+
+      # ── 5. Restore MLflow DB ─────────────────────────────────
+      - name: Restore MLflow DB (XGBoost runs)
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns-xgboost
+          path: Model_Pipeline/mlruns/
+        continue-on-error: true
+
+      - name: Restore MLflow DB (LightGBM runs)
+        uses: actions/download-artifact@v4
+        with:
+          name: mlruns-lightgbm
+          path: Model_Pipeline/mlruns/
+        continue-on-error: true
+
+      # ── 6. Retrain both models ──────────────────────────────
+      - name: Retrain XGBoost
+        working-directory: ${{ env.MODEL_SRC }}
+        run: |
+          mkdir -p ../../reports
+          python train_xgboost.py 2>&1 | tee ../../reports/retrain_xgboost.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Retrain LightGBM
+        working-directory: ${{ env.MODEL_SRC }}
+        run: |
+          python train_lightgbm.py 2>&1 | tee ../../reports/retrain_lightgbm.log
+          exit "${PIPESTATUS[0]}"
+
+      # ── 7. Validate retrained models ─────────────────────────
+      - name: Validate retrained models
+        working-directory: ${{ env.MODEL_SRC }}
+        run: |
+          mkdir -p ../../reports/validation
+          python model_validation.py 2>&1 | tee ../../reports/validation/retrain_validation.log
+          exit "${PIPESTATUS[0]}"
+
+      # ── 8. Promote retrained models ──────────────────────────
+      - name: Promote XGBoost model
+        working-directory: ${{ env.MODEL_SRC }}
+        run: |
+          python model_promotion.py promote --model-type xgboost \
+            2>&1 | tee ../../reports/promote_xgboost.log || {
+              echo "::warning::XGBoost promotion failed — non-blocking"
+          }
+
+      - name: Promote LightGBM model
+        working-directory: ${{ env.MODEL_SRC }}
+        run: |
+          python model_promotion.py promote --model-type lightgbm \
+            2>&1 | tee ../../reports/promote_lightgbm.log || {
+              echo "::warning::LightGBM promotion failed — non-blocking"
+          }
+
+      # ── 9. Save MLflow DB artifact ──────────────────────────
+      - name: Save MLflow DB (retrain run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns-retrain
+          path: Model_Pipeline/mlruns/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # ── 10. Slack notification ───────────────────────────────
+      - name: Send Slack notification
+        if: always() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          JOB_STATUS:        ${{ job.status }}
+          RUN_URL:           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA:        ${{ github.sha }}
+          BRANCH:            ${{ github.ref_name }}
+          ACTOR:             ${{ github.actor }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, sys, csv
+          import urllib.request
+          from datetime import datetime, timezone
+
+          job_status = os.environ.get("JOB_STATUS", "unknown")
+          run_url    = os.environ.get("RUN_URL", "")
+          commit_sha = os.environ.get("COMMIT_SHA", "")[:7]
+          branch     = os.environ.get("BRANCH", "unknown")
+          actor      = os.environ.get("ACTOR", "")
+          timestamp  = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+          meta_line = (
+              f"*Triggered by:* drift/decay alert   *Branch:* `{branch}`   "
+              f"*Commit:* `{commit_sha}`   *Time:* {timestamp}\n"
+              f"*Initiated by:* {actor}"
+          )
+
+          # ── Read pre-retrain MAE from monitoring report ─────────
+          # Only present if monitor-models ran in a prior step of this run.
+          # Falls back gracefully when triggered as a separate dispatch.
+          old_mae = {}
+          try:
+              with open("Model_Pipeline/reports/monitoring_report.json") as f:
+                  rep = json.load(f)
+              for h, h_data in rep.get("horizons", {}).items():
+                  if "current_mae" in h_data:
+                      old_mae[h] = h_data["current_mae"]
+          except Exception:
+              pass
+
+          # ── Read new MAE from training results CSVs ─────────────
+          new_mae = {}
+          try:
+              for path in [
+                  "Model_Pipeline/reports/xgboost_results.csv",
+                  "Model_Pipeline/reports/lightgbm_results.csv",
+              ]:
+                  if not os.path.exists(path):
+                      continue
+                  with open(path) as f:
+                      for row in csv.DictReader(f):
+                          h   = f"{int(float(row.get('horizon', 0)))}h"
+                          mae = float(row.get("mae", 0))
+                          # Keep lower MAE when both models are present
+                          if h not in new_mae or mae < new_mae[h]:
+                              new_mae[h] = mae
+          except Exception:
+              pass
+
+          # ── Check promotion outcome from log files ──────────────
+          # Promotion steps are non-blocking (exit 0 always), so we
+          # inspect the captured log for failure markers.
+          def check_promote_log(path):
+              try:
+                  with open(path) as f:
+                      content = f.read().lower()
+                  if "promotion failed" in content or "non-blocking" in content:
+                      return "not_promoted"
+                  if os.path.getsize(path) > 0:
+                      return "promoted"
+              except Exception:
+                  pass
+              return "unknown"
+
+          xgb_promo = check_promote_log("reports/promote_xgboost.log")
+          lgb_promo = check_promote_log("reports/promote_lightgbm.log")
+          any_promoted     = xgb_promo == "promoted" or lgb_promo == "promoted"
+          neither_promoted = (
+              xgb_promo in ("not_promoted", "unknown") and
+              lgb_promo in ("not_promoted", "unknown")
+          )
+
+          # ── Determine color, header, body ───────────────────────
+          if job_status != "success":
+              color       = "danger"
+              emoji       = "❌"
+              header_text = "EcoPulse Drift Retraining — FAILED"
+              body_text   = (
+                  meta_line + "\n\n"
+                  "❌ *Retraining failed.* One or more steps did not complete successfully.\n"
+                  "Check the run logs for the specific error.\n"
+                  "Production models have *not* been changed."
+              )
+
+          elif neither_promoted:
+              color       = "warning"
+              emoji       = "⚠️"
+              header_text = "EcoPulse Drift Retraining — No Improvement, Keeping Existing Models"
+              lines = [
+                  meta_line, "",
+                  "⚠️ *Retrained models did not outperform production — promotion skipped.*",
+                  "Existing production models remain active.", "",
+              ]
+              if new_mae:
+                  lines.append("*New model MAE (gCO₂/kWh) — not promoted:*")
+                  for h in sorted(new_mae, key=lambda x: int(x.rstrip("h"))):
+                      old = f"{old_mae[h]:.4f}" if h in old_mae else "—"
+                      lines.append(f"  🟡 *{h}*  old={old}  new={new_mae[h]:.4f}  (no improvement)")
+              body_text = "\n".join(lines)
+
+          else:
+              color       = "good"
+              emoji       = "✅"
+              header_text = "EcoPulse Drift Retraining — Complete, Models Promoted"
+              lines = [
+                  meta_line, "",
+                  "✅ *Retraining complete. Updated models deployed to production.*", "",
+              ]
+              if new_mae:
+                  lines.append("*MAE comparison per horizon (gCO₂/kWh):*")
+                  for h in sorted(new_mae, key=lambda x: int(x.rstrip("h"))):
+                      old     = f"{old_mae[h]:.4f}" if h in old_mae else "—"
+                      new     = f"{new_mae[h]:.4f}"
+                      if h in old_mae:
+                          delta = new_mae[h] - old_mae[h]
+                          flag  = "🟢" if delta < 0 else "🟡"
+                          lines.append(f"  {flag} *{h}*  old={old}  →  new={new}  (Δ{delta:+.4f})")
+                      else:
+                          lines.append(f"  🟢 *{h}*  new={new}")
+              body_text = "\n".join(lines)
+
+          # ── Build payload with colored attachment ───────────────
+          full_header = f"{emoji} {header_text}"
+          payload = {
+              "text": full_header,
+              "attachments": [
+                  {
+                      "color": color,
+                      "blocks": [
+                          {
+                              "type": "header",
+                              "text": {"type": "plain_text", "text": full_header, "emoji": True},
+                          },
+                          {
+                              "type": "section",
+                              "text": {"type": "mrkdwn", "text": body_text},
+                          },
+                          {"type": "divider"},
+                          {
+                              "type": "context",
+                              "elements": [
+                                  {"type": "mrkdwn", "text": f"<{run_url}|View full run logs →>"}
+                              ],
+                          },
+                      ],
+                  }
+              ],
+          }
+
+          req = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  print(f"Slack response: {resp.status} {resp.read().decode()}")
+          except Exception as e:
+              print(f"::warning::Slack notification failed: {e}")
+              sys.exit(0)
+          PYEOF
