@@ -17,8 +17,6 @@ stages:
       - reports/tfdv_bias/distribution_carbon_intensity_bucket.csv
       - reports/tfdv_bias/distribution_hour_of_day.csv
       - reports/tfdv_bias/tfdv_bias_report.md
-    plots:
-      - reports/tfdv_bias/plots/carbon_intensity_bucket_distribution.png
 
   bias_visualization:
     cmd: python src/bias_visualization.py

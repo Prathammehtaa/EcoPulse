@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = BASE_DIR / "config" / "preprocessing_config.yaml"
+CONFIG_PATH = BASE_DIR / "pipeline_config" / "preprocessing_config.yaml"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 def load_config(config_path: Path = CONFIG_PATH) -> dict:
     with open(config_path, "r") as f:
@@ -112,7 +112,7 @@ def handle_feature_nulls(df):
     return df
 
 
-def run_merge_and_feature_engineering(config, use_gcs=False):
+def run_merge_and_feature_engineering(config, use_gcs=True):
     if use_gcs:
         proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
         feat_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['features']}"
@@ -173,7 +173,7 @@ def main():
         level=getattr(logging, log_cfg.get("level", "INFO")),
         format=log_cfg.get("format", "%(asctime)s | %(name)s | %(levelname)s | %(message)s"),
     )
-    df = run_merge_and_feature_engineering(config, use_gcs=False)
+    df = run_merge_and_feature_engineering(config, use_gcs=True)
     print(f"\nFeature table done! Shape: {df.shape}")
     for i, col in enumerate(df.columns, 1):
         print(f"  {i:2d}. {col}")

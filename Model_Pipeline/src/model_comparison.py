@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from utils import (
     print_metrics_table, ensure_dirs, REPORTS_DIR, HORIZONS, logger
 )
+from mlflow_config import log_comparison_artifacts
 
 
 def load_all_results():
@@ -284,6 +285,14 @@ def run_comparison():
     comparison_path = os.path.join(REPORTS_DIR, "full_comparison.csv")
     comparison_df.to_csv(comparison_path, index=False)
     print(f"\n  Full comparison saved to: {comparison_path}")
+
+    # Log comparison artifacts to MLflow (dedicated comparison experiment)
+    print(f"\n  Logging comparison artifacts to MLflow...")
+    try:
+        log_comparison_artifacts(comparison_df, REPORTS_DIR)
+        print(f"  MLflow comparison run logged.")
+    except Exception as e:
+        logger.warning(f"MLflow comparison logging skipped: {e}")
 
     print(f"\n✅ Model comparison complete!")
     print(f"   Charts saved to: reports/")
