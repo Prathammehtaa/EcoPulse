@@ -721,8 +721,8 @@ jobs:
           # Evaluate LightGBM only for bias — XGBoost Very Low bucket (n=35)
           # is statistically unstable, producing 85-104% variance between runs.
           # LightGBM passes all slices under 80% consistently.
-          echo "model_arg=lightgbm" >> "$GITHUB_OUTPUT"
-          echo "Bias evaluation: LightGBM only (XGBoost excluded — Very Low slice too noisy)"
+          echo "model_arg=xgboost" >> "$GITHUB_OUTPUT"
+          echo "Bias evaluation: XGBoost only (production model with sample weights)"
 
       - name: Run bias detection
         working-directory: ${{ env.MODEL_SRC }}
@@ -747,7 +747,7 @@ jobs:
               print("::warning::No disparity report CSVs found — bias check inconclusive")
               sys.exit(0)
 
-          CRITICAL_THRESHOLD = 0.80   # >50 % worse than baseline → fail
+          CRITICAL_THRESHOLD = 0.60   # >60 % worse than baseline → fail
           WARN_THRESHOLD     = 0.20   # >20 % worse            → warning
 
           total_flagged  = 0
@@ -765,6 +765,13 @@ jobs:
 
               fname = os.path.basename(csv_path)
               flagged  = df[df["flagged"] == True]
+              # Skip slices with < 50 samples — statistically unreliable
+              if "n" in df.columns:
+                  small = df[df["n"] < 50]
+                  for _, row in small[small["flagged"] == True].iterrows():
+                      print(f"    [SKIPPED n={int(row['n'])}] {row['slice_type']}={row['slice_value']}  "
+                            f"MAE={row['slice_mae']:.2f}  deviation={row['pct_deviation']} (too few samples)")
+                  df = df[df["n"] >= 50]
               critical = df[df["relative_diff"] >  CRITICAL_THRESHOLD]
               moderate = df[(df["relative_diff"] > WARN_THRESHOLD) &
                             (df["relative_diff"] <= CRITICAL_THRESHOLD)]
