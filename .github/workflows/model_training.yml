@@ -766,12 +766,12 @@ jobs:
               fname = os.path.basename(csv_path)
               flagged  = df[df["flagged"] == True]
               # Skip slices with < 50 samples — statistically unreliable
-              if "n" in df.columns:
-                  small = df[df["n"] < 50]
+              if "n_samples" in df.columns:
+                  small = df[df["n_samples"] < 50]
                   for _, row in small[small["flagged"] == True].iterrows():
-                      print(f"    [SKIPPED n={int(row['n'])}] {row['slice_type']}={row['slice_value']}  "
+                      print(f"    [SKIPPED n={int(row['n_samples'])}] {row['slice_type']}={row['slice_value']}  "
                             f"MAE={row['slice_mae']:.2f}  deviation={row['pct_deviation']} (too few samples)")
-                  df = df[df["n"] >= 50]
+                  df = df[df["n_samples"] >= 50]
               critical = df[df["relative_diff"] >  CRITICAL_THRESHOLD]
               moderate = df[(df["relative_diff"] > WARN_THRESHOLD) &
                             (df["relative_diff"] <= CRITICAL_THRESHOLD)]
