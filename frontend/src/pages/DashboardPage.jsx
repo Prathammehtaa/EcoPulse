@@ -179,10 +179,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
               </span>
             </div>
             <div className="hero-best-window-actions">
-              <button className="primary-action inline" onClick={approveRecommendedWindow}>Approve</button>
-              <button className="ghost-action danger" type="button" onClick={() => onNavigate("scheduler")}>
-                Deny
-              </button>
+              <button className="primary-action inline" onClick={approveRecommendedWindow}>Schedule Workload</button>
             </div>
           </div>
         </div>
