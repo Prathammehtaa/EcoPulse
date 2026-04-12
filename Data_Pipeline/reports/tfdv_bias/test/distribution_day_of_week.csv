@@ -1,0 +1,8 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+Friday,1296,14.44,14.29,1.08,False,False
+Monday,1248,13.9,14.29,-2.7,False,False
+Saturday,1296,14.44,14.29,1.08,False,False
+Sunday,1296,14.44,14.29,1.08,False,False
+Thursday,1296,14.44,14.29,1.08,False,False
+Tuesday,1248,13.9,14.29,-2.7,False,False
+Wednesday,1296,14.44,14.29,1.08,False,False

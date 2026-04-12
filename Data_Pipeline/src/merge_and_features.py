@@ -45,27 +45,27 @@ def merge_datasets(grid, weather):
     return merged
 
 
-def run_merge(config, use_gcs=True):
+def run_merge(config, use_gcs=False):
     if use_gcs:
-        proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed']}"
+        proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['processed'].strip('/')}"
+        grid_path = f"{proc_dir}/{config['output']['files']['grid_processed']}"
+        weather_path = f"{proc_dir}/{config['output']['files']['weather_processed']}"
+        merged_path = f"{proc_dir}/{config['output']['files']['merged']}"
     else:
         proc_dir = PROJECT_ROOT / config["local"]["processed"]
+        grid_path = proc_dir / config["output"]["files"]["grid_processed"]
+        weather_path = proc_dir / config["output"]["files"]["weather_processed"]
+        merged_path = proc_dir / config["output"]["files"]["merged"]
 
-
-    grid_path = os.path.join(proc_dir, config["output"]["files"]["grid_processed"])
-    weather_path = os.path.join(proc_dir, config["output"]["files"]["weather_processed"])
-    merged_path = os.path.join(proc_dir, config["output"]["files"]["merged"])
-
-    # Phase 1: Merge
     logger.info("=" * 60)
     logger.info("PHASE 1: Merging datasets")
     logger.info("=" * 60)
 
-    grid, weather = load_processed_data(grid_path, weather_path)
+    grid, weather = load_processed_data(str(grid_path), str(weather_path))
     df = merge_datasets(grid, weather)
 
-    os.makedirs(os.path.dirname(merged_path), exist_ok=True)
-    df.to_parquet(merged_path, index=False, compression="snappy")
+    Path(merged_path).parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(str(merged_path), index=False, compression="snappy")
     logger.info(f"Saved merged: {merged_path}")
 
    
@@ -76,7 +76,7 @@ def main():
         level=getattr(logging, log_cfg.get("level", "INFO")),
         format=log_cfg.get("format", "%(asctime)s | %(name)s | %(levelname)s | %(message)s"),
     )
-    run_merge(config, use_gcs=True)
+    run_merge(config, use_gcs=False)
 
 
 if __name__ == "__main__":

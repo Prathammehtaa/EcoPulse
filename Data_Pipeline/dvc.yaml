@@ -4,7 +4,7 @@ stages:
     deps:
       - src/grid_preprocessing.py
       - src/weather_preprocessing.py
-      - config/preprocessing_config.yaml
+      - pipeline_config/preprocessing_config.yaml
       - data/raw/grid_signals/backfill/
       - data/raw/weather/backfill/
     outs:
@@ -34,6 +34,9 @@ stages:
       - src/label_temporal_split.py
       - data/features/feature_table.parquet
     outs:
+      - data/processed/train_split.parquet
+      - data/processed/val_split.parquet
+      - data/processed/test_split.parquet
       - data/processed/model_ready.parquet
 
   bias_analysis:
@@ -45,8 +48,6 @@ stages:
       - reports/tfdv_bias/distribution_carbon_intensity_bucket.csv
       - reports/tfdv_bias/distribution_hour_of_day.csv
       - reports/tfdv_bias/tfdv_bias_report.md
-    plots:
-      - reports/tfdv_bias/plots/carbon_intensity_bucket_distribution.png
 
   bias_mitigation:
     cmd: python src/bias_mitigation.py
@@ -54,7 +55,4 @@ stages:
       - src/bias_mitigation.py
       - data/features/feature_table.parquet
     outs:
-      - data/processed/train_balanced.parquet
-      - data/processed/val_balanced.paruet
-      - data/processed/test_balanced.parquet
       - reports/bias_mitigation/mitigation_report.json

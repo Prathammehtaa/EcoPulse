@@ -37,12 +37,31 @@ def floor_to_hour(dt: datetime) -> datetime:
 # ----------------------------
 # HTTP
 # ----------------------------
-def fetch_json(base_url: str, endpoint: str, token: str, params: dict) -> dict:
+def fetch_json(base_url: str, endpoint: str, token: str, params: dict) -> dict | None:
     url = f"{base_url.rstrip('/')}{endpoint}"
     headers = {"auth-token": token.strip()}
-    r = requests.get(url, params=params, headers=headers, timeout=60)
-    r.raise_for_status()
-    return r.json()
+
+    try:
+        r = requests.get(url, params=params, headers=headers, timeout=60)
+
+        if r.status_code == 404:
+            print(f"SKIP (404 Not Found) → {url} | params={params}")
+            return None
+
+        r.raise_for_status()
+        return r.json()
+
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP ERROR → {e} | URL={url} | params={params}")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"REQUEST ERROR → {e} | URL={url} | params={params}")
+        return None
+
+    except Exception as e:
+        print(f"UNKNOWN ERROR → {e} | URL={url} | params={params}")
+        return None
 
 
 # ----------------------------
@@ -134,6 +153,8 @@ def ingest_range(
     """
     Generic ingestion runner with idempotency.
     """
+    skipped_count = 0
+
     for current, chunk_end in chunks:
         blob_path = blob_path_builder(current, chunk_end)
 
@@ -160,6 +181,12 @@ def ingest_range(
         params["end"] = iso_z(chunk_end)
 
         resp = fetch_json(base_url, endpoint, token, params)
+
+        if resp is None:
+            skipped_count += 1
+            print(f"SKIP (no data returned) → {current:%Y-%m-%d %H:%M} to {chunk_end:%Y-%m-%d %H:%M}")
+            continue
+
         records = resp.get("data", resp)
 
         local_path = write_jsonl_local(project_root, blob_path, records)
@@ -167,6 +194,8 @@ def ingest_range(
 
         upload_jsonl(bucket, blob_path, records)
         print(f"Uploaded → gs://{bucket_name}/{blob_path}")
+
+    print(f"Finished ingestion range. Total skipped chunks due to API gaps/errors: {skipped_count}")
 
 
 # ----------------------------

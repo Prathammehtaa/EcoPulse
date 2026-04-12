@@ -42,8 +42,8 @@ regions:
 
 # ---- Training Window ----
 training_window:
-  start: "2023-01-01"
-  end: "2026-03-19"
+  start: "2019-01-01"
+  end: "2026-04-07"
 
 # ---- Grid Preprocessing ----
 grid:

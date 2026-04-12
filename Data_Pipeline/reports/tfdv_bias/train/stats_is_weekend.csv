@@ -1,0 +1,3 @@
+is_weekend,count,mean,std,min,median,max,missing_pct
+False,81360,360.42,135.93,20.0,371.0,981.0,0.0
+True,32544,353.31,134.59,23.0,361.0,889.0,0.0

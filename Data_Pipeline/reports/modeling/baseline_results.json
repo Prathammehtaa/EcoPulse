@@ -1,26 +1,26 @@
 {
-  "generated_at": "2026-03-18T23:43:34.349686",
+  "generated_at": "2026-04-08T16:27:09.884755",
   "baselines": {
     "persistence_1h": {
-      "mae": 52.03,
-      "rmse": 68.72,
-      "mape": 17.74
+      "mae": 61.630001068115234,
+      "rmse": 80.12999725341797,
+      "mape": 17.96
     },
     "persistence_24h": {
-      "mae": 64.04,
-      "rmse": 82.1,
-      "mape": 23.94
+      "mae": 79.16999816894531,
+      "rmse": 103.06999969482422,
+      "mape": 25.67
     },
     "historical_mean": {
-      "mae": 106.73,
-      "rmse": 127.89,
-      "mape": 64.64
+      "mae": 105.52999877929688,
+      "rmse": 132.11000061035156,
+      "mape": 52.25
     }
   },
   "data_split": {
-    "train_rows": 43776,
+    "train_rows": 113904,
     "val_rows": 4416,
-    "test_rows": 4368,
-    "total_rows": 52560
+    "test_rows": 8976,
+    "total_rows": 127296
   }
 }

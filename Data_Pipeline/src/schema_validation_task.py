@@ -17,6 +17,7 @@ def _load_config(project_root: Path) -> dict:
 
 
 def run_tfdv_schema_validation():
+    from schema_validation import validate_dataset
     """
     Loads datasets from local processed paths and validates them against baseline schemas.
     Returns True if all pass; raises if any fails (so Airflow marks task failed).

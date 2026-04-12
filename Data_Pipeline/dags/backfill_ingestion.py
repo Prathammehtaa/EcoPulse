@@ -47,7 +47,7 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(minutes=10),
     "on_failure_callback": notify_task_failure,     
-    "execution_timeout": timedelta(hours=2),         
+    "execution_timeout": timedelta(hours=3),         
 }
 
 def notify_success_email(**context):

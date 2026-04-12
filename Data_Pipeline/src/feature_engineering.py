@@ -11,7 +11,10 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import yaml
-
+from io import BytesIO
+import pyarrow as pa
+import pyarrow.parquet as pq
+from google.cloud import storage
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
@@ -195,13 +198,28 @@ def save_output(config, df):
     print('\n--- SAVING OUTPUT ---')
 
     output_path = os.path.join(FEATURE_DIR, 'feature_table.parquet')
+    os.makedirs(FEATURE_DIR, exist_ok=True)
     df.to_parquet(output_path, index=False)
 
-    proc_dir = f"gs://{config['gcs']['bucket']}/{config['gcs']['paths']['features']}"
-    feature_path = f"{proc_dir}/{config['output']['files']['feature_table']}"
-    df.to_parquet(feature_path, index=False)
 
-    print(f'  Saved: {output_path}')
+    feature_path = f"{config['gcs']['paths']['features'].strip('/')}/{config['output']['files']['feature_table']}"
+    project_id = config["gcs"].get("project_id")
+
+    client = storage.Client(project=project_id) if project_id else storage.Client()
+    bucket = client.bucket(config["gcs"]["bucket"])
+
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    buf = BytesIO()
+    pq.write_table(table, buf, compression="snappy")
+    buf.seek(0)
+
+    bucket.blob(feature_path).upload_from_file(
+        buf,
+        content_type="application/octet-stream"
+    )
+
+    print(f'  Saved locally: {output_path}')
+    print(f"  Saved to GCS: gs://{config['gcs']['bucket']}/{feature_path}")
     print(f'  Shape: {df.shape} rows × columns')
     print(f'  Columns: {df.columns.tolist()}')
 
@@ -234,7 +252,7 @@ def main():
     print(f'\nTotal columns after feature engineering: {len(df.columns)}')
 
     # Save
-    output_path = save_output(df)
+    output_path = save_output(config, df)
 
     print('\n' + '='*60)
     print('✅ STEP 2 COMPLETE')
