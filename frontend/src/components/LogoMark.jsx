@@ -1,11 +1,10 @@
 export default function LogoMark({ className = "" }) {
   return (
     <svg
-  className={className}
-  viewBox="0 0 120 128"
-  fill="none"
-  aria-hidden="true"
->
+      className={className}
+      viewBox="0 0 120 128"
+      fill="none"
+      aria-hidden="true"
     >
       <circle cx="60" cy="60" r="58" fill="#0f3d28"/>
       <path d="M60 18C60 18 38 34 38 54C38 67 47 77 60 77C73 77 82 67 82 54C82 34 60 18 60 18Z" fill="#4fc988"/>

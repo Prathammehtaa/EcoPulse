@@ -5,7 +5,7 @@
   --ink: #14281d;
   --muted: #6a7a71;
   --line: #dbe8de;
-  --green-900: #0f3d28;
+  --green-900: #1a4d35;;
   --green-800: #145233;
   --green-700: #1a6b43;
   --green-500: #2da866;
@@ -41,8 +41,8 @@ a { color: inherit; }
   gap: 24px;
 }
 .brand-block { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.brand-logo, .hero-banner-icon, .login-hero-logo { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: transparent; }
-.eco-logo { width: 64px; height: 64px; display: block; }
+.brand-logo, .hero-banner-icon, .login-hero-logo { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: transparent; }
+.eco-logo { width: 96px; height: 120px; display: block; border-radius: 50%; }
 .brand-name { font-size: 1.45rem; font-weight: 700; }
 .brand-name span,
 .login-hero h1 span { color: #86dba9; }

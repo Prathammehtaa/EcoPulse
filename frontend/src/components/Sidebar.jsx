@@ -26,7 +26,7 @@ export default function Sidebar({ role, currentPage, onNavigate, onLogout, usern
         </div>
         <div>
           <div className="brand-name">
-            Eco<span>Pulse</span>
+  <span style={{color: "#4fc988"}}>Eco</span><span style={{color: "white"}}>Pulse</span>
           </div>
           <div className="brand-subtitle">Carbon-aware operations</div>
         </div>
