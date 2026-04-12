@@ -41,10 +41,8 @@ a { color: inherit; }
   gap: 24px;
 }
 .brand-block { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.brand-logo, .hero-banner-icon, .login-hero-logo { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,0.08); }
-.hero-banner-icon, .login-hero-logo { width: 108px; height: 108px; }
-.eco-logo { width: 28px; height: 28px; display: block; }
-.eco-logo.large { width: 68px; height: 68px; }
+.brand-logo, .hero-banner-icon, .login-hero-logo { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: transparent; }
+.eco-logo { width: 64px; height: 64px; display: block; }
 .brand-name { font-size: 1.45rem; font-weight: 700; }
 .brand-name span,
 .login-hero h1 span { color: #86dba9; }
