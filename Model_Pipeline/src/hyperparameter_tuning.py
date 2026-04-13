@@ -16,10 +16,17 @@ Run: cd Model_Pipeline/src && python hyperparameter_tuning.py
 
 import sys
 import os
+
+# Reproducibility
+os.environ["PYTHONHASHSEED"] = "42"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import pandas as pd
 import numpy as np
+np.random.seed(42)
+
 import xgboost as xgb
 import optuna
 from optuna.samplers import TPESampler
@@ -55,10 +62,27 @@ if _GCP_PUSH:
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # Number of trials per horizon
-N_TRIALS = 50  # Takes ~10-15 min total. Increase to 100 for better results.
+N_TRIALS = 20
 
 
-def create_objective(X_train, y_train, X_val, y_val):
+def compute_sample_weights(train_df, y_train):
+    """
+    Fairness-aware sample weights: prioritize rare carbon intensity slices.
+    Very Low (< 100 gCO2/kWh) = 3x weight
+    Low (100-200) = 1.5x weight
+    Normal (>= 200) = 1x weight
+    """
+    ci = train_df["carbon_intensity_gco2_per_kwh"].loc[y_train.index]
+    weights = np.ones(len(y_train))
+    weights[ci < 100] = 3.0
+    weights[(ci >= 100) & (ci < 200)] = 1.5
+    logger.info(f"  Sample weights: Very Low(3x)={int((ci < 100).sum())}, "
+                f"Low(1.5x)={int(((ci >= 100) & (ci < 200)).sum())}, "
+                f"Normal(1x)={int((ci >= 200).sum())}")
+    return weights
+
+
+def create_objective(X_train, y_train, X_val, y_val, sample_weights=None):
     """
     Create an Optuna objective function for a specific horizon.
     
@@ -89,6 +113,7 @@ def create_objective(X_train, y_train, X_val, y_val):
             "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 2.0),
             "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 5.0),
             "random_state": 42,
+            "seed": 42,
             "n_jobs": -1,
             "early_stopping_rounds": 30,
         }
@@ -96,12 +121,14 @@ def create_objective(X_train, y_train, X_val, y_val):
         model = xgb.XGBRegressor(**params)
         model.fit(
             X_train, y_train,
+            sample_weight=sample_weights,
             eval_set=[(X_val, y_val)],
             verbose=False
         )
 
         preds = model.predict(X_val)
         mae = np.mean(np.abs(y_val - preds))
+        mlflow.log_metric("trial_mae", mae, step=trial.number)
         return mae
 
     return objective
@@ -117,6 +144,9 @@ def tune_horizon(train_df, val_df, test_df, horizon, n_trials=N_TRIALS):
     X_test, y_test, _ = prepare_Xy(test_df, horizon)
     X_train, X_val, X_test, feature_cols = align_columns(X_train, X_val, X_test)
 
+    # Compute fairness-aware sample weights
+    sample_weights = compute_sample_weights(train_df, y_train)
+
     # Create and run study
     study = optuna.create_study(
         direction="minimize",
@@ -124,25 +154,27 @@ def tune_horizon(train_df, val_df, test_df, horizon, n_trials=N_TRIALS):
         study_name=f"xgboost_{horizon}h"
     )
 
-    objective = create_objective(X_train, y_train, X_val, y_val)
+    objective = create_objective(X_train, y_train, X_val, y_val, sample_weights)
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     # Best params
     best_params = study.best_params
     best_params["random_state"] = 42
+    best_params["seed"] = 42
     best_params["n_jobs"] = -1
     best_params["early_stopping_rounds"] = 30
 
     print(f"\n  Best params for {horizon}h:")
     for k, v in best_params.items():
-        if k not in ["random_state", "n_jobs", "early_stopping_rounds"]:
+        if k not in ["random_state", "seed", "n_jobs", "early_stopping_rounds"]:
             print(f"    {k}: {v}")
     print(f"  Best validation MAE: {study.best_value:.4f}")
 
-    # Retrain with best params on full training data
+    # Retrain with best params on full training data (with weights)
     final_model = xgb.XGBRegressor(**best_params)
     final_model.fit(
         X_train, y_train,
+        sample_weight=sample_weights,
         eval_set=[(X_val, y_val)],
         verbose=False
     )
@@ -189,6 +221,7 @@ def run_tuning():
     print("=" * 80)
     print("ECOPULSE HYPERPARAMETER TUNING (OPTUNA)")
     print(f"Trials per horizon: {N_TRIALS}")
+    print(f"Sample weights: Very Low=3x, Low=1.5x, Normal=1x")
     print("=" * 80)
 
     splits = load_all_splits()
@@ -202,8 +235,8 @@ def run_tuning():
     all_params  = {}
     timestamp   = get_timestamp()
 
-    # Original XGBoost results for comparison
-    original_mae = {1: 25.14, 6: 34.34, 12: 39.97, 24: 43.01}
+    # Base XGBoost results for comparison (on 240K dataset)
+    original_mae = {1: 27.15, 6: 36.02, 12: 40.89, 24: 42.60}
 
     # Parent run groups all horizon tuning into one session
     with mlflow.start_run(run_name=f"optuna_all_{timestamp}"):
@@ -213,6 +246,7 @@ def run_tuning():
             "n_trials":      str(N_TRIALS),
             "horizons":      ",".join(str(h) for h in HORIZONS),
             "project":       "ecopulse",
+            "sample_weights": "very_low=3x,low=1.5x",
         })
         mlflow.log_param("n_trials", N_TRIALS)
 
@@ -240,11 +274,13 @@ def run_tuning():
                 # Best hyperparameters (exclude non-loggable fixed params)
                 loggable_params = {
                     k: v for k, v in result["best_params"].items()
-                    if k not in ["random_state", "n_jobs", "early_stopping_rounds"]
+                    if k not in ["random_state", "seed", "n_jobs", "early_stopping_rounds"]
                 }
                 mlflow.log_params(loggable_params)
                 mlflow.log_metric("optuna_best_val_mae", result["best_val_mae"])
                 mlflow.log_metric("n_features", len(result["feature_cols"]))
+                mlflow.log_metric("best_trial_number", result["study"].best_trial.number)
+                mlflow.log_metric("best_trial_duration_s", result["study"].best_trial.duration.total_seconds())
 
                 # Split metrics
                 for split_name, metrics in result["results"].items():
@@ -296,6 +332,16 @@ def run_tuning():
             all_results.append(test_metrics)
             all_params[horizon] = result["best_params"]
 
+        # Save best params and log as MLflow artifact (still inside parent run)
+        params_df = pd.DataFrame([
+            {"horizon": h, **{k: v for k, v in p.items()
+             if k not in ["random_state", "seed", "n_jobs", "early_stopping_rounds"]}}
+            for h, p in all_params.items()
+        ])
+        params_path = os.path.join(REPORTS_DIR, "best_hyperparameters.csv")
+        params_df.to_csv(params_path, index=False)
+        mlflow.log_artifact(params_path)
+
     # Summary
     print(f"\n{'='*80}")
     print("TUNING SUMMARY (TEST SET)")
@@ -304,29 +350,20 @@ def run_tuning():
 
     # Comparison with original
     print(f"\n{'='*80}")
-    print("TUNED vs ORIGINAL XGBOOST")
+    print("TUNED vs BASE XGBOOST (with sample weights)")
     print(f"{'='*80}")
-    print(f"  {'Horizon':<10} {'Original MAE':>15} {'Tuned MAE':>15} {'Improvement':>15}")
+    print(f"  {'Horizon':<10} {'Base MAE':>15} {'Tuned MAE':>15} {'Improvement':>15}")
     print(f"  {'-'*55}")
     for r in all_results:
         h = r["horizon"]
-        orig = original_mae[h]
+        orig = original_mae.get(h, 0)
         tuned = r["mae"]
-        imp = ((orig - tuned) / orig) * 100
+        imp = ((orig - tuned) / orig) * 100 if orig > 0 else 0
         status = "IMPROVED" if tuned < orig else "NO GAIN"
         print(f"  {f'{h}h':<10} {orig:>15.2f} {tuned:>15.2f} {f'{imp:+.1f}% {status}':>15}")
 
     # Save results
     save_results(all_results, "tuned_xgboost_results.csv")
-
-    # Save best params
-    params_df = pd.DataFrame([
-        {"horizon": h, **{k: v for k, v in p.items() 
-         if k not in ["random_state", "n_jobs", "early_stopping_rounds"]}}
-        for h, p in all_params.items()
-    ])
-    params_path = os.path.join(REPORTS_DIR, "best_hyperparameters.csv")
-    params_df.to_csv(params_path, index=False)
 
     print(f"\n✅ Hyperparameter tuning complete!")
     print(f"   Tuned models saved to: models/xgboost_tuned_*.joblib")

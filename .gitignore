@@ -15,7 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
-data/
+/data/
 logs/
 lib64/
 parts/
@@ -210,3 +210,14 @@ __marimo__/
 .idea/
 .cfg
 gcp-sa.json
+.DS_Store
+MLflow/
+.DS_Store
+MLflow/
+path/
+Model_Pipeline/mlruns/mlflow.db
+Model_Pipeline/models/*.joblib
+Model_Pipeline/mlruns/
+Model_Pipeline/reports/bias/
+Model_Pipeline/reports/*.csv
+Model_Pipeline/reports/*.png

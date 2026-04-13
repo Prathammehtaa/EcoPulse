@@ -47,6 +47,7 @@ from utils import (
     MODELS_DIR, REPORTS_DIR,
     logger
 )
+from mlflow_config import setup_mlflow
 
 warnings.filterwarnings("ignore")
 
@@ -96,14 +97,21 @@ DISPARITY_THRESHOLD = 0.20
 
 def load_model(model_name: str, horizon: int):
     """
-    Load a trained model saved by train_xgboost.py or train_lightgbm.py.
-    Naming convention: models/xgboost_{horizon}h.joblib
+    Load a trained model — prefers tuned version, falls back to base.
+    Tuned: models/xgboost_tuned_{horizon}h.joblib
+    Base:  models/xgboost_{horizon}h.joblib
     """
-    model_path = os.path.join(MODELS_DIR, f"{model_name}_{horizon}h.joblib")
-    if not os.path.exists(model_path):
+    tuned_path = os.path.join(MODELS_DIR, f"{model_name}_tuned_{horizon}h.joblib")
+    base_path = os.path.join(MODELS_DIR, f"{model_name}_{horizon}h.joblib")
+    
+    if os.path.exists(tuned_path):
+        model_path = tuned_path
+    elif os.path.exists(base_path):
+        model_path = base_path
+    else:
         raise FileNotFoundError(
-            f"Model not found: {model_path}\n"
-            f"Run train_{model_name}.py first (Person 1)."
+            f"Model not found: {tuned_path} or {base_path}\n"
+            f"Run train_{model_name}.py or hyperparameter tuning first."
         )
     model = joblib.load(model_path)
     logger.info(f"Loaded model: {model_path}")
@@ -322,12 +330,7 @@ def log_to_mlflow(
     Log per-slice metrics into the same MLflow experiment used by
     train_xgboost.py and train_lightgbm.py (ecopulse-carbon-forecasting).
     """
-    mlflow_db = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "mlruns", "mlflow.db"
-    )
-    mlflow.set_tracking_uri(f"sqlite:///{mlflow_db}")
-    mlflow.set_experiment("ecopulse-carbon-forecasting")
+    setup_mlflow()
 
     run_name = (f"bias_{model_name}_{horizon}h_"
                 f"{datetime.now().strftime('%Y%m%d_%H%M%S')}")

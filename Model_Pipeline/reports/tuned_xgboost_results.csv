@@ -1,5 +1,0 @@
-mae,rmse,r2,mape,model,horizon
-21.6165,29.9633,0.9215,7.9108,XGBoost Tuned (1h),1
-31.4158,43.1204,0.8377,11.665,XGBoost Tuned (6h),6
-36.8316,49.8001,0.7841,13.8117,XGBoost Tuned (12h),12
-40.41,53.6532,0.7502,15.4423,XGBoost Tuned (24h),24

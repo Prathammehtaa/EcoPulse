@@ -16,6 +16,7 @@ Environment variables:
 import os
 import tempfile
 import subprocess
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -65,7 +66,7 @@ def setup_mlflow(experiment_name: str = None) -> None:
                          TRAINING_EXPERIMENT_NAME (env-var overridable).
     """
     os.makedirs(_MLRUNS_DIR, exist_ok=True)
-    uri = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{_DEFAULT_DB}")
+    uri = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{Path(__file__).resolve().parents[2]}/mlruns/mlflow.db")
     mlflow.set_tracking_uri(uri)
     mlflow.set_experiment(experiment_name or TRAINING_EXPERIMENT_NAME)
 

@@ -242,8 +242,9 @@ def run_sensitivity(X_train, y_train, horizon):
     for param, values in space.items():
         scores = []
         for v in values:
-            p = {**bp, "random_state": 42, "n_jobs": -1,
+            p = {**bp, "random_state": 42, "n_jobs": 1,
                  "n_estimators": min(bp["n_estimators"], 300)}
+            v = min(v, 500) if param == "n_estimators" else v
             p[param] = v
             cv = cross_val_score(xgb.XGBRegressor(**p), X_train, y_train,
                                  cv=3, scoring="neg_mean_absolute_error", n_jobs=-1)
