@@ -26,6 +26,11 @@ from utils import (
     FORECAST_TARGETS, HORIZONS, MODELS_DIR, REPORTS_DIR,
     logger, get_timestamp
 )
+from mlflow_config import (
+    setup_mlflow, build_run_tags, get_performance_tier,
+    log_dataset_info, log_feature_importance_plot,
+    register_model, TRAINING_EXPERIMENT_NAME,
+)
 
 # ============================================================
 # XGBOOST HYPERPARAMETERS
@@ -179,9 +184,9 @@ def train_all_horizons():
             mlflow.log_artifact(importance_path)
 
 
-                # --- Performance tier tag ---
-                tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
-                mlflow.set_tag("perf_tier", tier)
+            # --- Performance tier tag ---
+            tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
+            mlflow.set_tag("perf_tier", tier)
 
             # --- Performance tier tag ---
             tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
@@ -230,7 +235,7 @@ def train_all_horizons():
                     auto_promote=True,
                 )
 
-<<<<<<< HEAD
+
                 # --- Save model locally ---
                 save_model(result["model"], f"xgboost_{horizon}h")
 
@@ -270,13 +275,13 @@ def train_all_horizons():
                 test_metrics["model"] = f"XGBoost ({horizon}h)"
                 test_metrics["horizon"] = horizon
                 all_results.append(test_metrics)
-=======
+
             # --- Collect test results for summary ---
             test_metrics          = result["results"]["test"].copy()
             test_metrics["model"] = f"XGBoost ({horizon}h)"
             test_metrics["horizon"] = horizon
             all_results.append(test_metrics)
->>>>>>> ed5ab84d8da354f604902bae0c132b98a9918f58
+
 
     # Summary
     print(f"\n{'='*80}")
