@@ -4,7 +4,6 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,14 +11,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
     - name: Restore MLflow DB
       uses: actions/download-artifact@v4
       with:
         name: mlflow-db
         path: ./mlflow
       continue-on-error: true
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -28,15 +25,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pandas numpy pyyaml mlflow google-cloud-storage
-
+        pip install pytest pandas numpy pyyaml pyarrow requests mlflow google-cloud-storage
     - name: Run preprocessing tests
       run: |
         cd Data_Pipeline
         pytest tests/test_preprocessing.py -v
       env:
         MLFLOW_TRACKING_URI: sqlite:///mlflow/mlflow.db
-
     - name: Save MLflow DB
       uses: actions/upload-artifact@v4
       with:
