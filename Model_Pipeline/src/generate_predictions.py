@@ -23,7 +23,7 @@ import sys
 # ============================================================
 # CONFIG
 # ============================================================
-HORIZONS = [1, 6, 12, 24]
+HORIZONS = [1, 12, 24]
 TARGET_COL = "carbon_intensity_gco2_per_kwh"
 ZONE_COL = "zone"
 DATETIME_COL = "datetime"

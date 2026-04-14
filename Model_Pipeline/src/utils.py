@@ -53,7 +53,7 @@ FORECAST_TARGETS = {
     24: "carbon_intensity_target_24h",
 }
 
-HORIZONS = [1, 6, 12, 24]
+HORIZONS = [1, 12, 24]
 
 # Columns to EXCLUDE from features
 DROP_COLS = [
