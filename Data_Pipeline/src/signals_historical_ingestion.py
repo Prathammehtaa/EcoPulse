@@ -148,10 +148,11 @@ def ingest_range(
     chunks,
     skip_if_exists: bool,
     min_bytes: int = 10,
-    prefer_gcs_truth: bool = True,
 ):
     """
     Generic ingestion runner with idempotency.
+    Skips a chunk only if it already exists in both GCS and local.
+    Otherwise always writes local and uploads to GCS.
     """
     skipped_count = 0
 
@@ -162,16 +163,8 @@ def ingest_range(
             exists_gcs = gcs_blob_exists_nonempty(bucket, blob_path, min_bytes=min_bytes)
             exists_local = local_file_exists_nonempty(project_root, blob_path, min_bytes=min_bytes)
 
-            if prefer_gcs_truth and exists_gcs:
-                print(f"SKIP (exists in GCS) → gs://{bucket_name}/{blob_path}")
-                continue
-
-            if (not prefer_gcs_truth) and (exists_gcs or exists_local):
-                print(f"SKIP (exists) → gs://{bucket_name}/{blob_path} or local")
-                continue
-
-            if exists_local and not exists_gcs:
-                print(f"SKIP (exists locally) → data/{blob_path}")
+            if exists_gcs and exists_local:
+                print(f"SKIP (exists in GCS and local) → gs://{bucket_name}/{blob_path}")
                 continue
 
         print(f"Fetching {current:%Y-%m-%d %H:%M} → {chunk_end:%Y-%m-%d %H:%M}")
@@ -296,7 +289,6 @@ def main(mode: str | None = None) -> None:
                 chunks=chunks,
                 skip_if_exists=skip_if_exists,
                 min_bytes=min_bytes,
-                prefer_gcs_truth=True,
             )
 
         for source in electricity_sources:
@@ -327,7 +319,6 @@ def main(mode: str | None = None) -> None:
                 chunks=chunks,
                 skip_if_exists=skip_if_exists,
                 min_bytes=min_bytes,
-                prefer_gcs_truth=True,
             )
 
     print("\nRaw ingestion complete for all zones and signals.")
