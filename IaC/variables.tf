@@ -44,6 +44,7 @@ variable "node_count" {
   default     = 1
 }
 
+
 variable "machine_type" {
   description = "Machine type for GKE nodes"
   type        = string
