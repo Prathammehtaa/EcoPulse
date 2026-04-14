@@ -178,15 +178,15 @@ def train_all_horizons():
             result["importance"].to_csv(importance_path, index=False)
             mlflow.log_artifact(importance_path)
 
-<<<<<<< HEAD
+
                 # --- Performance tier tag ---
                 tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
                 mlflow.set_tag("perf_tier", tier)
-=======
+
             # --- Performance tier tag ---
             tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
             mlflow.set_tag("perf_tier", tier)
->>>>>>> ed5ab84d8da354f604902bae0c132b98a9918f58
+
 
             # --- Log model with schema signature ---
             mlflow.xgboost.log_model(
