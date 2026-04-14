@@ -105,7 +105,11 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
     print(f"\n  Top 10 Features:")
     for _, row in importance_df.head(10).iterrows():
         print(f"    {row['feature']:<50} {row['importance']}")
-
+    
+    from mlflow.models.signature import infer_signature
+    X_sample = X_train.iloc[:50]
+    signature = infer_signature(X_sample, model.predict(X_sample))
+    
     return {
         "model": model,
         "results": results,
@@ -113,6 +117,8 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
         "feature_cols": feature_cols,
         "best_iteration": best_iteration,
         "horizon": horizon,
+        "signature": signature,
+        "X_sample": X_sample,
     }
 
 
