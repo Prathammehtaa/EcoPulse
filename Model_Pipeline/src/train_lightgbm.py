@@ -119,6 +119,9 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
         "horizon": horizon,
         "signature": signature,
         "X_sample": X_sample,
+        "preds_by_split": {
+            "val": (y_val, model.predict(X_val)),
+            "test": (y_test, model.predict(X_test)),
     }
 
 
