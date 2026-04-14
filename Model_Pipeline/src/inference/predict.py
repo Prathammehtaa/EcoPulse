@@ -48,7 +48,7 @@ _MODEL_PIPELINE_DIR = os.path.abspath(os.path.join(_THIS_DIR, "..", ".."))
 _MODELS_DIR = os.path.join(_MODEL_PIPELINE_DIR, "models")
 
 # Available forecast horizons (each has its own trained model)
-HORIZONS = [1, 6, 12, 24]
+HORIZONS = [1, 12, 24]
 
 # Columns that should NOT be used as features
 # These must match exactly what train_xgboost.py drops during training
@@ -57,7 +57,6 @@ DROP_COLUMNS = [
     "aws_region", "gcp_region", "azure_region",  # string columns
     "carbon_intensity_gco2_per_kwh",              # the target itself
     "carbon_intensity_target_1h",                  # forecast targets
-    "carbon_intensity_target_6h",
     "carbon_intensity_target_12h",
     "carbon_intensity_target_24h",
 ]
@@ -90,7 +89,7 @@ class CarbonPredictor:
         WHAT HAPPENS HERE:
             - Looks for xgboost_tuned_*.joblib first (best models)
             - Falls back to xgboost_*.joblib if tuned not found
-            - Stores models in a dictionary: {1: model_1h, 6: model_6h, ...}
+            - Stores models in a dictionary: {1: model_1h, 12: model_12h, 24: model_24h}
             - Also stores the feature column names each model expects
         
         Args:
@@ -177,7 +176,7 @@ class CarbonPredictor:
         
         Args:
             df: Input DataFrame with raw features
-            horizon: Forecast horizon (1, 6, 12, or 24)
+            horizon: Forecast horizon (1, 12, or 24)
             
         Returns:
             DataFrame with features aligned to model's expectations
@@ -226,7 +225,7 @@ class CarbonPredictor:
         Args:
             features: DataFrame with input features (can be 1 row or many)
                       Must contain the same columns as the training data
-            horizon: How far ahead to predict (1, 6, 12, or 24 hours)
+            horizon: How far ahead to predict (1, 12, or 24 hours)
         
         Returns:
             numpy array of predicted carbon intensity values (gCO2/kWh)
@@ -235,8 +234,8 @@ class CarbonPredictor:
             predictor = CarbonPredictor()
             
             # Single prediction
-            preds = predictor.predict(current_features_df, horizon=6)
-            print(f"Carbon intensity in 6h: {preds[0]:.1f} gCO2/kWh")
+            preds = predictor.predict(current_features_df, horizon=12)
+            print(f"Carbon intensity in 12h: {preds[0]:.1f} gCO2/kWh")
             
             # Batch prediction (24 rows = 24 hours)
             preds = predictor.predict(next_24h_features, horizon=1)
@@ -268,7 +267,7 @@ class CarbonPredictor:
         Predict all 4 horizons at once.
         
         Useful for generating a complete forecast:
-        "In 1h it'll be X, in 6h it'll be Y, in 12h it'll be Z, in 24h it'll be W"
+        "In 1h it'll be X, in 12h it'll be Z, in 24h it'll be W"
         
         Args:
             features: DataFrame with input features

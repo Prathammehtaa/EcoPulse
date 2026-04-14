@@ -1,0 +1,45 @@
+groups:
+  - name: ecopulse_model_alerts
+    rules:
+      - alert: ModelDecayWarning
+        expr: ecopulse_mae_pct_change > 0.20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model decay warning for horizon {{ $labels.horizon }}"
+          description: >-
+            MAE percentage change is {{ $value | printf "%.2f" }} (threshold: 0.20)
+            for horizon {{ $labels.horizon }}.
+
+      - alert: ModelDecayCritical
+        expr: ecopulse_mae_pct_change > 0.35
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical model decay for horizon {{ $labels.horizon }}"
+          description: >-
+            MAE percentage change is {{ $value | printf "%.2f" }} (threshold: 0.35)
+            for horizon {{ $labels.horizon }}. Automated retraining should be triggered.
+
+      - alert: DataDriftDetected
+        expr: ecopulse_drift_detected == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data drift detected"
+          description: >-
+            Data drift has been detected in the incoming feature distribution.
+            Automated retraining should be triggered.
+
+      - alert: BiasCheckFailed
+        expr: ecopulse_bias_critical_count > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bias check failures detected"
+          description: >-
+            {{ $value }} critical bias failures detected across model horizons.

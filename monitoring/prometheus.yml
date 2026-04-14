@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alert_rules.yml
+
+scrape_configs:
+  # CI-pushed metrics via Pushgateway
+  - job_name: ecopulse-metrics
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
