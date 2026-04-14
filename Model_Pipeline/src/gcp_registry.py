@@ -23,7 +23,7 @@ Environment variables
 ---------------------
     GCP_PROJECT_ID              GCP project (default: ecopulse-mlops-pratham)
     GCP_REGISTRY_LOCATION       Region           (default: us-central1)
-    GCP_REGISTRY_REPO           Repository name  (default: ecopulse-models)
+    GCP_REGISTRY_REPO           Repository name  (default: ecopulse-models-generic)
     GOOGLE_APPLICATION_CREDENTIALS
                                 Path to service-account JSON key.
                                 Falls back to ~/ecopulse-sa-key.json, then ADC.
@@ -73,7 +73,7 @@ logger = logging.getLogger("ecopulse-model.gcp_registry")
 # ============================================================
 GCP_PROJECT_ID       = os.getenv("GCP_PROJECT_ID",       "ecopulse-mlops-pratham")
 GCP_REGISTRY_LOCATION = os.getenv("GCP_REGISTRY_LOCATION", "us-central1")
-GCP_REGISTRY_REPO    = os.getenv("GCP_REGISTRY_REPO",    "ecopulse-models")
+GCP_REGISTRY_REPO    = os.getenv("GCP_REGISTRY_REPO",    "ecopulse-models-generic")
 
 # Default SA key location — CI/CD uses ADC, local dev uses this file
 _DEFAULT_SA_KEY = os.path.expanduser("~/ecopulse-sa-key.json")

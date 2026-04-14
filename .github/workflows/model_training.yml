@@ -18,7 +18,7 @@
 # Required secrets:
 #   SLACK_WEBHOOK_URL     Incoming webhook for Slack notifications
 #   GCP_SA_KEY_PRATHAM             GCP service-account key JSON (base64-encoded).
-#                         Enables push to Artifact Registry (ecopulse-models).
+#                         Enables push to Artifact Registry (ecopulse-models-generic).
 #                         Without this secret the GCP push is skipped gracefully.
 #
 # Optional secrets:
@@ -87,7 +87,7 @@ env:
   GCP_PUSH_MODELS: "1"
   GCP_PROJECT_ID: "ecopulse-mlops-pratham"
   GCP_REGISTRY_LOCATION: "us-central1"
-  GCP_REGISTRY_REPO: "ecopulse-models"
+  GCP_REGISTRY_REPO: "ecopulse-models-generic"
 
 defaults:
   run:
