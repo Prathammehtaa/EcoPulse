@@ -168,65 +168,57 @@ def train_all_horizons():
             result["importance"].to_csv(importance_path, index=False)
             mlflow.log_artifact(importance_path)
 
-<<<<<<< HEAD
-                # --- Performance tier tag ---
-                tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
-                mlflow.set_tag("perf_tier", tier)
+            # --- Performance tier tag ---
+            tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
+            mlflow.set_tag("perf_tier", tier)
 
-                # --- Log model with schema signature ---
-                mlflow.lightgbm.log_model(
-                    result["model"],
-                    artifact_path=f"lightgbm_{horizon}h",
-                    signature=result["signature"],
-                    input_example=result["X_sample"],
+            # --- Log model with schema signature ---
+            mlflow.lightgbm.log_model(
+                result["model"],
+                artifact_path=f"lightgbm_{horizon}h",
+                signature=result["signature"],
+                input_example=result["X_sample"],
+            )
+
+            # --- Save model locally ---
+            save_model(result["model"], f"lightgbm_{horizon}h")
+
+            # --- Feature importance CSV + plot ---
+            importance_path = os.path.join(REPORTS_DIR, f"lgb_importance_{horizon}h.csv")
+            result["importance"].to_csv(importance_path, index=False)
+            mlflow.log_artifact(importance_path, artifact_path="feature_importance")
+            log_feature_importance_plot(
+                result["importance"], horizon, "lightgbm", REPORTS_DIR
+            )
+
+            # --- Residual plots for val and test splits ---
+            for split_name in ["val", "test"]:
+                y_true, y_pred = result["preds_by_split"][split_name]
+                log_residual_plot(y_true, y_pred, split_name, horizon, "lightgbm", REPORTS_DIR)
+
+            # --- Opt-in model registry ---
+            run_id = mlflow.active_run().info.run_id
+            register_model(run_id, f"lightgbm_{horizon}h", horizon, "lightgbm")
+
+            # --- GCP Artifact Registry push (opt-in via GCP_PUSH_MODELS=1) ---
+            if _GCP_PUSH:
+                push_after_mlflow_log(
+                    model_path=os.path.join(MODELS_DIR, f"lightgbm_{horizon}h.joblib"),
+                    model_name=f"lightgbm_{horizon}h",
+                    version=os.getenv("RETRAIN_VERSION") or make_version_string("lightgbm", horizon),
+                    mlflow_run_id=run_id,
+                    horizon=horizon,
+                    model_type="lightgbm",
+                    metrics=result["results"]["test"],
+                    performance_tier=tier,
+                    auto_promote=True,
                 )
 
-                # --- Save model locally ---
-                save_model(result["model"], f"lightgbm_{horizon}h")
-
-                # --- Feature importance CSV + plot ---
-                importance_path = os.path.join(REPORTS_DIR, f"lgb_importance_{horizon}h.csv")
-                result["importance"].to_csv(importance_path, index=False)
-                mlflow.log_artifact(importance_path, artifact_path="feature_importance")
-                log_feature_importance_plot(
-                    result["importance"], horizon, "lightgbm", REPORTS_DIR
-                )
-
-                # --- Residual plots for val and test splits ---
-                for split_name in ["val", "test"]:
-                    y_true, y_pred = result["preds_by_split"][split_name]
-                    log_residual_plot(y_true, y_pred, split_name, horizon, "lightgbm", REPORTS_DIR)
-
-                # --- Opt-in model registry ---
-                run_id = mlflow.active_run().info.run_id
-                register_model(run_id, f"lightgbm_{horizon}h", horizon, "lightgbm")
-
-                # --- GCP Artifact Registry push (opt-in via GCP_PUSH_MODELS=1) ---
-                if _GCP_PUSH:
-                    push_after_mlflow_log(
-                        model_path=os.path.join(MODELS_DIR, f"lightgbm_{horizon}h.joblib"),
-                        model_name=f"lightgbm_{horizon}h",
-                        version=os.getenv("RETRAIN_VERSION") or make_version_string("lightgbm", horizon),
-                        mlflow_run_id=run_id,
-                        horizon=horizon,
-                        model_type="lightgbm",
-                        metrics=result["results"]["test"],
-                        performance_tier=tier,
-                        auto_promote=True,
-                    )
-
-                # --- Collect test results for summary ---
-                test_metrics          = result["results"]["test"].copy()
-                test_metrics["model"] = f"LightGBM ({horizon}h)"
-                test_metrics["horizon"] = horizon
-                all_results.append(test_metrics)
-=======
-            # Collect test results
-            test_metrics = result["results"]["test"].copy()
+            # --- Collect test results for summary ---
+            test_metrics          = result["results"]["test"].copy()
             test_metrics["model"] = f"LightGBM ({horizon}h)"
             test_metrics["horizon"] = horizon
             all_results.append(test_metrics)
->>>>>>> 10dfc7f9906ffe5236c56f631a0c0603b5381383
 
     # Summary
     print(f"\n{'='*80}")
