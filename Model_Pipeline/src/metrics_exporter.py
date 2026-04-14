@@ -57,7 +57,7 @@ PUSHGATEWAY_URL = os.environ.get("PUSHGATEWAY_URL", "http://localhost:9091")
 METRICS_PORT = int(os.environ.get("METRICS_PORT", "8000"))
 PUSH_INTERVAL = int(os.environ.get("PUSH_INTERVAL", "30"))
 
-HORIZONS = ["1h", "6h", "12h", "24h"]
+HORIZONS = ["1h", "12h", "24h"]
 
 # ── Prometheus registry and gauges ───────────────────────────────
 registry = CollectorRegistry()
@@ -152,7 +152,7 @@ def _find_latest_bias_csvs() -> dict[str, str]:
         parts = entry.name.replace(".csv", "").split("_")
         horizon_label = None
         for part in parts:
-            if part in ("1h", "6h", "12h", "24h"):
+            if part in ("1h", "12h", "24h"):
                 horizon_label = part
                 break
 
