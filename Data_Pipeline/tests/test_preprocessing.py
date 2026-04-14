@@ -41,6 +41,7 @@ from merge_and_features import merge_datasets
 # Feature engineering — functions live in feature_engineering.py
 from feature_engineering import (
     add_temporal_features,
+    add_cyclical_encodings,
     add_lag_features,
     add_rolling_features,
     add_interaction_features,
@@ -227,6 +228,7 @@ class TestAddTemporalFeatures:
 
     def test_adds_cyclical_features(self, sample_grid_data):
         result = add_temporal_features(sample_grid_data)
+        result = add_cyclical_encodings(result)
         assert 'hour_sin' in result.columns
         assert 'hour_cos' in result.columns
         assert 'month_sin' in result.columns
@@ -317,6 +319,7 @@ class TestAddInteractionFeatures:
             'wind_speed_100m_ms': [10.0],
             'cloud_cover_pct': [50.0],
             'carbon_free_energy_pct': [40.0],
+            'renewable_energy_pct': [30.0],
         })
         df = add_temporal_features(df)  # is_daytime=1 at noon
         result = add_interaction_features(df)
