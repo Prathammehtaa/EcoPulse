@@ -28,7 +28,7 @@ from utils import (
 )
 from mlflow_config import (
     setup_mlflow, build_run_tags, get_performance_tier,
-    log_dataset_info, log_feature_importance_plot,
+    log_dataset_info, log_feature_importance_plot,log_residual_plot,
     register_model, TRAINING_EXPERIMENT_NAME,
 )
 
