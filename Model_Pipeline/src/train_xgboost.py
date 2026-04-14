@@ -247,7 +247,7 @@ def train_all_horizons():
                     push_after_mlflow_log(
                         model_path=os.path.join(MODELS_DIR, f"xgboost_{horizon}h.joblib"),
                         model_name=f"xgboost_{horizon}h",
-                        version=make_version_string("xgboost", horizon),
+                        version=os.getenv("RETRAIN_VERSION") or make_version_string("xgboost", horizon),
                         mlflow_run_id=run_id,
                         horizon=horizon,
                         model_type="xgboost",

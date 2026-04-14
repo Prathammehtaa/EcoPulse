@@ -238,7 +238,7 @@ def train_all_horizons():
                     push_after_mlflow_log(
                         model_path=os.path.join(MODELS_DIR, f"lightgbm_{horizon}h.joblib"),
                         model_name=f"lightgbm_{horizon}h",
-                        version=make_version_string("lightgbm", horizon),
+                        version=os.getenv("RETRAIN_VERSION") or make_version_string("lightgbm", horizon),
                         mlflow_run_id=run_id,
                         horizon=horizon,
                         model_type="lightgbm",
