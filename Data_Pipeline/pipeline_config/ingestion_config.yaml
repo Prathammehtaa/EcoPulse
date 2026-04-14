@@ -48,7 +48,7 @@ pipeline:
   mode: "backfill"
 
 gcs:
-  bucket: "ecopulse"
+  bucket: "ecopulse-lakehouse"
   raw_prefix: "raw"
 
 # Global Weather API Settings

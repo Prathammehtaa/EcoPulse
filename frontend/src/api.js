@@ -1,10 +1,12 @@
 /**
  * EcoPulse API Client
- * All calls to FastAPI backend (http://localhost:8000)
- * Replace mockData.js imports with these functions.
+ * In development: calls http://localhost:8000 directly
+ * In production (K8s): calls /api/ which nginx proxies to backend-service
  */
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.PROD
+  ? "/api"
+  : "http://localhost:8000";
 
 async function get(path) {
   const res = await fetch(`${BASE_URL}${path}`);
@@ -22,14 +24,9 @@ async function post(path, body) {
   return res.json();
 }
 
-// GET /regions → [{zone, intensity, bucket, carbonFreePct, renewablePct}]
 export const getRegions = () => get("/regions");
-
-// GET /forecast/{zone}?horizon=6 → {zone, horizon, values: [24 floats]}
 export const getForecast = (zone, horizon = 6) =>
   get(`/forecast/${encodeURIComponent(zone)}?horizon=${horizon}`);
-
-// POST /predict → full recommendation object
 export const predict = (zone, energyKwh, runtimeHours, horizon, priorityHours) =>
   post("/predict", {
     zone,
@@ -38,28 +35,12 @@ export const predict = (zone, energyKwh, runtimeHours, horizon, priorityHours) =
     horizon,
     priority_hours: priorityHours,
   });
-
-// GET /metrics
 export const getMetrics = () => get("/metrics");
-
-// GET /drift
 export const getDrift = () => get("/drift");
-
-// GET /shap
 export const getShap = () => get("/shap");
-
-// GET /alerts
 export const getAlerts = () => get("/alerts");
-
-// GET /logs
 export const getLogs = () => get("/logs");
-
-// GET /users
 export const getUsers = () => get("/users");
-
-// POST /retrain
 export const retrain = (model = "lightgbm", horizon = 6) =>
   post(`/retrain?model=${model}&horizon=${horizon}`, {});
-
-// GET /health
 export const getHealth = () => get("/health");

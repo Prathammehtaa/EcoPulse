@@ -15,7 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
-/data/
+Data_Pipeline/data/
 logs/
 lib64/
 parts/
