@@ -178,7 +178,6 @@ def train_all_horizons():
             result["importance"].to_csv(importance_path, index=False)
             mlflow.log_artifact(importance_path)
 
-<<<<<<< HEAD
                 # --- Performance tier tag ---
                 tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
                 mlflow.set_tag("perf_tier", tier)
@@ -230,13 +229,6 @@ def train_all_horizons():
                 test_metrics["model"] = f"XGBoost ({horizon}h)"
                 test_metrics["horizon"] = horizon
                 all_results.append(test_metrics)
-=======
-            # Collect test results for summary
-            test_metrics = result["results"]["test"].copy()
-            test_metrics["model"] = f"XGBoost ({horizon}h)"
-            test_metrics["horizon"] = horizon
-            all_results.append(test_metrics)
->>>>>>> 10dfc7f9906ffe5236c56f631a0c0603b5381383
 
     # Summary
     print(f"\n{'='*80}")
