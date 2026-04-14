@@ -30,6 +30,7 @@ from utils import (
 )
 from mlflow_config import (
     setup_mlflow, build_run_tags, get_performance_tier,
+<<<<<<< HEAD
     log_dataset_info, log_feature_importance_plot, log_residual_plot,
     register_model, TRAINING_EXPERIMENT_NAME,
 )
@@ -41,6 +42,11 @@ if _GCP_PUSH:
         from gcp_registry import push_after_mlflow_log, make_version_string
     except ImportError:
         _GCP_PUSH = False
+=======
+    log_dataset_info, log_feature_importance_plot,log_residual_plot,
+    register_model, TRAINING_EXPERIMENT_NAME,
+)
+>>>>>>> ef132e8b79b948f2ac4bcefede05d444b54a34b5
 
 # ============================================================
 # LIGHTGBM HYPERPARAMETERS
@@ -124,11 +130,19 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
     print(f"\n  Top 10 Features:")
     for _, row in importance_df.head(10).iterrows():
         print(f"    {row['feature']:<50} {row['importance']}")
+<<<<<<< HEAD
 
     # MLflow signature
     X_sample = X_train.iloc[:50]
     signature = infer_signature(X_sample, model.predict(X_sample))
 
+=======
+    
+    from mlflow.models.signature import infer_signature
+    X_sample = X_train.iloc[:50]
+    signature = infer_signature(X_sample, model.predict(X_sample))
+    
+>>>>>>> ef132e8b79b948f2ac4bcefede05d444b54a34b5
     return {
         "model": model,
         "results": results,
