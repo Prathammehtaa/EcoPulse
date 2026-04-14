@@ -1,7 +1,7 @@
 """
 EcoPulse LightGBM Model Training
 =================================
-Trains LightGBM regressors for each forecast horizon (1h, 6h, 12h, 24h).
+Trains LightGBM regressors for each forecast horizon (1h, 12h, 24h).
 Same structure as XGBoost for fair comparison.
 
 Author: Aaditya Krishna (ML Modelling Lead)

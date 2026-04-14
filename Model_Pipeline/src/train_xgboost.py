@@ -1,7 +1,7 @@
 """
 EcoPulse XGBoost Model Training
 ================================
-Trains XGBoost regressors for each forecast horizon (1h, 6h, 12h, 24h).
+Trains XGBoost regressors for each forecast horizon (1h, 12h, 24h).
 Uses validation set for early stopping, evaluates on held-out test set.
 Tracks all experiments in MLflow.
 Run: cd Model_Pipeline/src && python train_xgboost.py
