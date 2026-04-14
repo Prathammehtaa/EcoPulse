@@ -37,18 +37,18 @@ ingestion:
 
   endpoint_template: "/v3/{signal}/past-range"
 
-  start: "2023-01-01T00:00:00Z"
-  end: "2026-01-01T00:00:00Z"
+  start: "2019-01-01T00:00:00Z"
+  end: "2026-04-07T00:00:00Z"
   chunk_days: 10
 
   static_params:
     temporalGranularity: "hourly"
 
 pipeline:
-  mode: "hourly"
+  mode: "backfill"
 
 gcs:
-  bucket: "ecopulse"
+  bucket: "ecopulse-lakehouse"
   raw_prefix: "raw"
 
 # Global Weather API Settings
@@ -70,8 +70,8 @@ locations:
 
 # Ingestion Logic Settings
 ingestion_weather:
-  start: "2023-01-01Z"
-  end: "2025-12-31Z"
+  start: "2019-01-01Z"
+  end: "2026-04-07Z"
   chunk_days: 30  # Updated to 30 days as requested
   signals:
     - "temperature_2m"

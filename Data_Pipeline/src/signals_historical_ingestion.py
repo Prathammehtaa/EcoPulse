@@ -37,12 +37,31 @@ def floor_to_hour(dt: datetime) -> datetime:
 # ----------------------------
 # HTTP
 # ----------------------------
-def fetch_json(base_url: str, endpoint: str, token: str, params: dict) -> dict:
+def fetch_json(base_url: str, endpoint: str, token: str, params: dict) -> dict | None:
     url = f"{base_url.rstrip('/')}{endpoint}"
     headers = {"auth-token": token.strip()}
-    r = requests.get(url, params=params, headers=headers, timeout=60)
-    r.raise_for_status()
-    return r.json()
+
+    try:
+        r = requests.get(url, params=params, headers=headers, timeout=60)
+
+        if r.status_code == 404:
+            print(f"SKIP (404 Not Found) → {url} | params={params}")
+            return None
+
+        r.raise_for_status()
+        return r.json()
+
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP ERROR → {e} | URL={url} | params={params}")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"REQUEST ERROR → {e} | URL={url} | params={params}")
+        return None
+
+    except Exception as e:
+        print(f"UNKNOWN ERROR → {e} | URL={url} | params={params}")
+        return None
 
 
 # ----------------------------
@@ -129,11 +148,14 @@ def ingest_range(
     chunks,
     skip_if_exists: bool,
     min_bytes: int = 10,
-    prefer_gcs_truth: bool = True,
 ):
     """
     Generic ingestion runner with idempotency.
+    Skips a chunk only if it already exists in both GCS and local.
+    Otherwise always writes local and uploads to GCS.
     """
+    skipped_count = 0
+
     for current, chunk_end in chunks:
         blob_path = blob_path_builder(current, chunk_end)
 
@@ -141,16 +163,8 @@ def ingest_range(
             exists_gcs = gcs_blob_exists_nonempty(bucket, blob_path, min_bytes=min_bytes)
             exists_local = local_file_exists_nonempty(project_root, blob_path, min_bytes=min_bytes)
 
-            if prefer_gcs_truth and exists_gcs:
-                print(f"SKIP (exists in GCS) → gs://{bucket_name}/{blob_path}")
-                continue
-
-            if (not prefer_gcs_truth) and (exists_gcs or exists_local):
-                print(f"SKIP (exists) → gs://{bucket_name}/{blob_path} or local")
-                continue
-
-            if exists_local and not exists_gcs:
-                print(f"SKIP (exists locally) → data/{blob_path}")
+            if exists_gcs and exists_local:
+                print(f"SKIP (exists in GCS and local) → gs://{bucket_name}/{blob_path}")
                 continue
 
         print(f"Fetching {current:%Y-%m-%d %H:%M} → {chunk_end:%Y-%m-%d %H:%M}")
@@ -160,6 +174,12 @@ def ingest_range(
         params["end"] = iso_z(chunk_end)
 
         resp = fetch_json(base_url, endpoint, token, params)
+
+        if resp is None:
+            skipped_count += 1
+            print(f"SKIP (no data returned) → {current:%Y-%m-%d %H:%M} to {chunk_end:%Y-%m-%d %H:%M}")
+            continue
+
         records = resp.get("data", resp)
 
         local_path = write_jsonl_local(project_root, blob_path, records)
@@ -167,6 +187,8 @@ def ingest_range(
 
         upload_jsonl(bucket, blob_path, records)
         print(f"Uploaded → gs://{bucket_name}/{blob_path}")
+
+    print(f"Finished ingestion range. Total skipped chunks due to API gaps/errors: {skipped_count}")
 
 
 # ----------------------------
@@ -267,7 +289,6 @@ def main(mode: str | None = None) -> None:
                 chunks=chunks,
                 skip_if_exists=skip_if_exists,
                 min_bytes=min_bytes,
-                prefer_gcs_truth=True,
             )
 
         for source in electricity_sources:
@@ -298,7 +319,6 @@ def main(mode: str | None = None) -> None:
                 chunks=chunks,
                 skip_if_exists=skip_if_exists,
                 min_bytes=min_bytes,
-                prefer_gcs_truth=True,
             )
 
     print("\nRaw ingestion complete for all zones and signals.")

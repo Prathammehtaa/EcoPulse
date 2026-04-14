@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+.json
 # Distribution / packaging
 .Python
 build/
@@ -15,7 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
-/data/
+Data_Pipeline/data/
 logs/
 lib64/
 parts/

@@ -1,40 +1,58 @@
 stages:
-  stage_data:
-    cmd: python src/stage_data.py
+  preprocessing:
+    cmd: python src/grid_preprocessing.py && python src/weather_preprocessing.py
     deps:
-      - src/stage_data.py
-      - config/ingestion_config.yaml
+      - src/grid_preprocessing.py
+      - src/weather_preprocessing.py
+      - pipeline_config/preprocessing_config.yaml
+      - data/raw/grid_signals/backfill/
+      - data/raw/weather/backfill/
     outs:
-      - data/stage/grid_signals_all_zones.parquet
-      - data/stage/weather_all_locations.parquet
+      - data/processed/grid_data_processed.parquet
+      - data/processed/weather_data_processed.parquet
+
+  merge:
+    cmd: python src/merge_and_features.py
+    deps:
+      - src/merge_and_features.py
+      - data/processed/grid_data_processed.parquet
+      - data/processed/weather_data_processed.parquet
+    outs:
+      - data/processed/merged_dataset.parquet
+
+  feature_engineering:
+    cmd: python src/feature_engineering.py
+    deps:
+      - src/feature_engineering.py
+      - data/processed/merged_dataset.parquet
+    outs:
+      - data/features/feature_table.parquet
+
+  label_split:
+    cmd: python src/label_temporal_split.py
+    deps:
+      - src/label_temporal_split.py
+      - data/features/feature_table.parquet
+    outs:
+      - data/processed/train_split.parquet
+      - data/processed/val_split.parquet
+      - data/processed/test_split.parquet
+      - data/processed/model_ready.parquet
 
   bias_analysis:
     cmd: python src/tfdv_bias_analysis.py
     deps:
       - src/tfdv_bias_analysis.py
-      - data/stage/grid_signals_all_zones.parquet
+      - data/features/feature_table.parquet
     outs:
       - reports/tfdv_bias/distribution_carbon_intensity_bucket.csv
       - reports/tfdv_bias/distribution_hour_of_day.csv
       - reports/tfdv_bias/tfdv_bias_report.md
 
-  bias_visualization:
-    cmd: python src/bias_visualization.py
-    deps:
-      - src/bias_visualization.py
-      - reports/tfdv_bias/distribution_carbon_intensity_bucket.csv
-    outs:
-      - reports/tfdv_bias/bias_summary.json
-    plots:
-      - reports/tfdv_bias/plots/
-
   bias_mitigation:
     cmd: python src/bias_mitigation.py
     deps:
       - src/bias_mitigation.py
-      - data/stage/grid_signals_all_zones.parquet
+      - data/features/feature_table.parquet
     outs:
-      - data/processed/train_balanced.csv
-      - data/processed/val_balanced.csv
-      - data/processed/test_balanced.csv
       - reports/bias_mitigation/mitigation_report.json

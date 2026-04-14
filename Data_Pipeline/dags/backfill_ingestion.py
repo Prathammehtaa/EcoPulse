@@ -31,7 +31,12 @@ from grid_preprocessing import main as grid_preprocessing_main
 from weather_historical_ingestion import main as weather_ingestion_main
 from weather_preprocessing import main as weather_preprocessing_main
 from merge_and_features import main as merge_features_main
+from merge_validate import main as merge_validate_main
+from feature_engineering import main as feature_engineering_main
+from label_temporal_split import main as label_temporal_split_main
 from schema_validation_task import run_tfdv_schema_validation
+from tfdv_bias_analysis import main as tfdv_bias_analysis_main
+from bias_mitigation import main as bias_mitigation_main
 from alerts import get_recipients, notify_task_failure, notify_dag_failure, make_success_slack_callable
 
 from airflow.utils.email import send_email
@@ -42,7 +47,7 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(minutes=10),
     "on_failure_callback": notify_task_failure,     
-    "execution_timeout": timedelta(hours=2),         
+    "execution_timeout": timedelta(hours=3),         
 }
 
 def notify_success_email(**context):
@@ -125,12 +130,41 @@ with DAG(
     )
 
     merge_and_features = PythonOperator(
-        task_id="merge_and_feature_engineering",
+        task_id="merge",
         python_callable=merge_features_main,
         sla=timedelta(hours=2),
     )
 
+    merge_validate = PythonOperator(
+        task_id="merge_validate",
+        python_callable=merge_validate_main,
+        sla=timedelta(hours=2),
+    )
 
+    feature_engineering = PythonOperator(
+        task_id="feature_engineering",
+        python_callable=feature_engineering_main,
+        sla=timedelta(hours=2),
+    )
+
+    label_temporal_split = PythonOperator(
+        task_id="label_temporal_split",
+        python_callable=label_temporal_split_main,
+        sla=timedelta(hours=2),
+    )
+
+
+    tfdv_bias_analysis = PythonOperator(
+    task_id="tfdv_bias_analysis",
+    python_callable=tfdv_bias_analysis_main,
+    sla=timedelta(hours=2),
+)
+    
+    bias_mitigation = PythonOperator(
+    task_id="bias_mitigation",
+    python_callable=bias_mitigation_main,
+    sla=timedelta(hours=2),
+)
     schema_validation_tfdv = PythonOperator(
     task_id="schema_validation_tfdv",
     python_callable=run_tfdv_schema_validation,
@@ -154,4 +188,4 @@ with DAG(
 
     start >> [grid_pipeline, weather_pipeline]
     [grid_pipeline, weather_pipeline] >> join_before_merge
-    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> email_success >> end
+    join_before_merge >> merge_and_features >> merge_validate >> feature_engineering >> label_temporal_split >> tfdv_bias_analysis >> bias_mitigation >> schema_validation_tfdv >> slack_success >> email_success >> end

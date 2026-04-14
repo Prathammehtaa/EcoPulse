@@ -1,0 +1,5 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+Fall,26208,23.01,25.0,-7.96,False,False
+Spring,30912,27.14,25.0,8.56,False,False
+Summer,27936,24.53,25.0,-1.88,False,False
+Winter,28848,25.33,25.0,1.32,False,False

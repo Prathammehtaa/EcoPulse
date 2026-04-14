@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-04-08T16:27:09.884755",
+  "baselines": {
+    "persistence_1h": {
+      "mae": 61.630001068115234,
+      "rmse": 80.12999725341797,
+      "mape": 17.96
+    },
+    "persistence_24h": {
+      "mae": 79.16999816894531,
+      "rmse": 103.06999969482422,
+      "mape": 25.67
+    },
+    "historical_mean": {
+      "mae": 105.52999877929688,
+      "rmse": 132.11000061035156,
+      "mape": 52.25
+    }
+  },
+  "data_split": {
+    "train_rows": 113904,
+    "val_rows": 4416,
+    "test_rows": 8976,
+    "total_rows": 127296
+  }
+}

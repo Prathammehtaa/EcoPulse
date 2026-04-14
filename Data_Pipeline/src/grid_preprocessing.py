@@ -1,6 +1,7 @@
 # src/grid_preprocessing.py
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import os
@@ -56,11 +57,11 @@ def ensure_trailing_slash(prefix: str) -> str:
 
 
 # ----------------------------
-# IO: read JSONL records (local or GCS)
+# IO: read JSONL into DataFrame (local or GCS)
 # ----------------------------
-def read_jsonl_records(path: str, gcs_client: Optional[storage.Client] = None) -> List[dict]:
+def read_jsonl_dataframe(path: str, gcs_client: Optional[storage.Client] = None) -> pd.DataFrame:
     """
-    Reads all *.jsonl under a folder/prefix and returns a list of dict records.
+    Reads all *.jsonl under a folder/prefix and returns a single DataFrame.
 
     path can be:
       - local folder path: /opt/airflow/data/raw/grid_signals/zone=.../signal
@@ -69,11 +70,11 @@ def read_jsonl_records(path: str, gcs_client: Optional[storage.Client] = None) -
     if is_gs_uri(path):
         if gcs_client is None:
             gcs_client = storage.Client()
-        return read_jsonl_records_gcs(path, gcs_client)
-    return read_jsonl_records_local(path)
+        return read_jsonl_dataframe_gcs(path, gcs_client)
+    return read_jsonl_dataframe_local(path)
 
 
-def read_jsonl_records_local(folder_path: str) -> List[dict]:
+def read_jsonl_dataframe_local(folder_path: str) -> pd.DataFrame:
     folder = Path(folder_path)
     if not folder.exists():
         raise FileNotFoundError(f"Folder not found: {folder_path}")
@@ -82,58 +83,75 @@ def read_jsonl_records_local(folder_path: str) -> List[dict]:
     if not jsonl_files:
         raise FileNotFoundError(f"No JSONL files in: {folder_path}")
 
-    all_records: List[dict] = []
+    dfs: List[pd.DataFrame] = []
+    total_rows = 0
+
     for fp in jsonl_files:
         try:
-            with open(fp, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        all_records.append(json.loads(line))
-                    except json.JSONDecodeError as e:
-                        logger.warning("Bad JSON line in %s: %s", fp.name, e)
+            df = pd.read_json(fp, lines=True)
+            if df.empty:
+                continue
+            dfs.append(df)
+            total_rows += len(df)
+        except ValueError as e:
+            logger.warning("Bad JSONL in %s: %s", fp.name, e)
         except Exception as e:
             logger.warning("Failed reading %s: %s", fp.name, e)
 
-    logger.info("Read %s records from %s files in %s", len(all_records), len(jsonl_files), folder.name)
-    return all_records
+    if not dfs:
+        raise FileNotFoundError(f"No readable JSONL records in: {folder_path}")
+
+    result = pd.concat(dfs, ignore_index=True)
+    logger.info("Read %s records from %s files in %s", total_rows, len(jsonl_files), folder.name)
+
+    del dfs
+    gc.collect()
+    return result
 
 
-def read_jsonl_records_gcs(prefix_gs_uri: str, client: storage.Client) -> List[dict]:
+def read_jsonl_dataframe_gcs(prefix_gs_uri: str, client: storage.Client) -> pd.DataFrame:
     bucket_name, prefix = parse_gs_uri(prefix_gs_uri)
     prefix = ensure_trailing_slash(prefix)
 
-    blobs = list(client.list_blobs(bucket_name, prefix=prefix))
-    jsonl_blobs = [b for b in blobs if b.name.lower().endswith(".jsonl")]
+    jsonl_blobs = [
+        b for b in client.list_blobs(bucket_name, prefix=prefix)
+        if b.name.lower().endswith(".jsonl")
+    ]
 
     if not jsonl_blobs:
         raise FileNotFoundError(f"No JSONL files in: gs://{bucket_name}/{prefix}")
 
-    all_records: List[dict] = []
+    dfs: List[pd.DataFrame] = []
+    total_rows = 0
+
     for b in sorted(jsonl_blobs, key=lambda x: x.name):
         try:
-            data = b.download_as_bytes()
-            for raw in data.splitlines():
-                line = raw.decode("utf-8", errors="ignore").strip()
-                if not line:
-                    continue
-                try:
-                    all_records.append(json.loads(line))
-                except json.JSONDecodeError as e:
-                    logger.warning("Bad JSON line in gs://%s/%s: %s", bucket_name, b.name, e)
+            with b.open("r") as f:
+                df = pd.read_json(f, lines=True)
+            if df.empty:
+                continue
+            dfs.append(df)
+            total_rows += len(df)
+        except ValueError as e:
+            logger.warning("Bad JSONL in gs://%s/%s: %s", bucket_name, b.name, e)
         except Exception as e:
             logger.warning("Failed reading gs://%s/%s: %s", bucket_name, b.name, e)
 
+    if not dfs:
+        raise FileNotFoundError(f"No readable JSONL records in: gs://{bucket_name}/{prefix}")
+
+    result = pd.concat(dfs, ignore_index=True)
     logger.info(
         "Read %s records from %s files in gs://%s/%s",
-        len(all_records),
+        total_rows,
         len(jsonl_blobs),
         bucket_name,
         prefix,
     )
-    return all_records
+
+    del dfs
+    gc.collect()
+    return result
 
 
 # ----------------------------
@@ -146,16 +164,13 @@ def read_single_signal(
     value_field_overrides: Dict[str, str],
     gcs_client: Optional[storage.Client] = None,
 ) -> pd.DataFrame:
-    folder_path = f"{base_path}/zone={zone}/{signal}"
-    records = read_jsonl_records(folder_path, gcs_client=gcs_client)
+    folder_path = f"{base_path}/backfill/zone={zone}/{signal}"
+    df = read_jsonl_dataframe(folder_path, gcs_client=gcs_client)
 
-    if not records:
+    if df.empty:
         logger.warning("No data for zone=%s, signal=%s", zone, signal)
         return pd.DataFrame()
 
-    df = pd.DataFrame(records)
-
-    # default ElectricityMap style field is usually "value", but yours overrides some signals
     value_field = value_field_overrides.get(signal, "value")
     if value_field not in df.columns:
         logger.error(
@@ -175,10 +190,12 @@ def read_single_signal(
     df["zone"] = zone
     df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
 
-    # avoid formatting errors if non-numeric
+    df[signal] = pd.to_numeric(df[signal], errors="coerce").astype("float32")
+    df["zone"] = df["zone"].astype("category")
+
     try:
-        mn = float(pd.to_numeric(df[signal], errors="coerce").min())
-        mx = float(pd.to_numeric(df[signal], errors="coerce").max())
+        mn = float(df[signal].min())
+        mx = float(df[signal].max())
         logger.info("  %s [%s]: %s rows, range [%.3f - %.3f]", signal, zone, len(df), mn, mx)
     except Exception:
         logger.info("  %s [%s]: %s rows", signal, zone, len(df))
@@ -194,18 +211,27 @@ def merge_grid_signals(
     gcs_client: Optional[storage.Client] = None,
 ) -> pd.DataFrame:
     merged: Optional[pd.DataFrame] = None
+    merged_count = 0
 
     for signal in signals:
         df = read_single_signal(base_path, zone, signal, value_field_overrides, gcs_client=gcs_client)
         if df.empty:
             continue
-        merged = df if merged is None else pd.merge(merged, df, on=["datetime", "zone"], how="outer")
+
+        if merged is None:
+            merged = df
+        else:
+            merged = pd.merge(merged, df, on=["datetime", "zone"], how="outer", sort=False)
+
+        merged_count += 1
+        del df
+        gc.collect()
 
     if merged is None:
         raise ValueError(f"No signal data found for zone {zone}")
 
     merged = merged.sort_values("datetime").reset_index(drop=True)
-    logger.info("Merged %s signals for %s: %s", len(signals), zone, merged.shape)
+    logger.info("Merged %s signals for %s: %s", merged_count, zone, merged.shape)
     return merged
 
 
@@ -228,7 +254,7 @@ def fill_timeline_gaps(df: pd.DataFrame, zone: str) -> pd.DataFrame:
     timeline_df = pd.DataFrame({"datetime": full_timeline, "zone": zone})
 
     before = len(df)
-    df = pd.merge(timeline_df, df, on=["datetime", "zone"], how="left")
+    df = pd.merge(timeline_df, df, on=["datetime", "zone"], how="left", sort=False)
     gaps = len(df) - before
     if gaps > 0:
         logger.info("Filled %s timeline gaps for %s", gaps, zone)
@@ -239,6 +265,7 @@ def handle_missing_values(df: pd.DataFrame, signal_cols: List[str]) -> pd.DataFr
     for zone in df["zone"].unique():
         mask = df["zone"] == zone
         df.loc[mask, signal_cols] = df.loc[mask, signal_cols].ffill().bfill()
+
     remaining = int(df[signal_cols].isnull().sum().sum())
     logger.info("Remaining nulls after ffill/bfill: %s", remaining)
     return df
@@ -251,7 +278,7 @@ def validate_and_clip(df: pd.DataFrame, value_ranges: Dict[str, Dict[str, float]
         outliers = ((df[col] < bounds["min"]) | (df[col] > bounds["max"])).sum()
         if outliers > 0:
             logger.warning("Clipping %s outliers in %s", int(outliers), col)
-        df[col] = df[col].clip(lower=bounds["min"], upper=bounds["max"])
+        df[col] = df[col].clip(lower=bounds["min"], upper=bounds["max"]).astype("float32")
     return df
 
 
@@ -320,8 +347,8 @@ def process_grid_data(config: dict, use_gcs: bool = True) -> pd.DataFrame:
 
     if use_gcs:
         bucket = config["gcs"]["bucket"]
-        raw_grid_prefix = config["gcs"]["paths"]["raw_grid"]      # raw/grid_signals
-        processed_prefix = config["gcs"]["paths"]["processed"]    # processed
+        raw_grid_prefix = config["gcs"]["paths"]["raw_grid"]
+        processed_prefix = config["gcs"]["paths"]["processed"]
         project_id = config["gcs"].get("project_id")
 
         gcs_client = storage.Client(project=project_id) if project_id else storage.Client()
@@ -337,14 +364,25 @@ def process_grid_data(config: dict, use_gcs: bool = True) -> pd.DataFrame:
     logger.info("STEP 1: Reading and merging grid signals")
     logger.info("=" * 60)
 
-    zone_dfs: List[pd.DataFrame] = []
+    df: Optional[pd.DataFrame] = None
+
     for region in regions_cfg:
         zone = region["grid_zone"]
         logger.info("\nProcessing zone: %s", zone)
-        zone_df = merge_grid_signals(base_path, zone, signals, value_overrides, gcs_client=gcs_client)
-        zone_dfs.append(zone_df)
 
-    df = pd.concat(zone_dfs, ignore_index=True)
+        zone_df = merge_grid_signals(base_path, zone, signals, value_overrides, gcs_client=gcs_client)
+
+        if df is None:
+            df = zone_df
+        else:
+            df = pd.concat([df, zone_df], ignore_index=True)
+
+        del zone_df
+        gc.collect()
+
+    if df is None or df.empty:
+        raise ValueError("No grid data found across configured regions")
+
     logger.info("\nCombined all zones: %s", df.shape)
 
     # Step 2: Rename columns
@@ -363,7 +401,12 @@ def process_grid_data(config: dict, use_gcs: bool = True) -> pd.DataFrame:
         zone_df = df[df["zone"] == zone].copy()
         zone_df = fill_timeline_gaps(zone_df, zone)
         filled.append(zone_df)
+        del zone_df
+        gc.collect()
+
     df = pd.concat(filled, ignore_index=True)
+    del filled
+    gc.collect()
 
     df = df.sort_values(["zone", "datetime"]).reset_index(drop=True)
     df = handle_missing_values(df, signal_cols)
@@ -395,7 +438,7 @@ def process_grid_data(config: dict, use_gcs: bool = True) -> pd.DataFrame:
 def main() -> None:
     config = load_config()
     setup_logging(config)
-    df = process_grid_data(config, use_gcs=True)
+    df = process_grid_data(config, use_gcs=False)
     logger.info("Grid done! Shape: %s | Nulls: %s", df.shape, int(df.isnull().sum().sum()))
     logger.info("Columns: %s", df.columns.tolist())
 

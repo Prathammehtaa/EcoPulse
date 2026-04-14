@@ -1,5 +1,0 @@
-outs:
-- md5: 8786475f6a0defc5759362d9ba4a9f06
-  size: 1427504
-  hash: md5
-  path: val_split.parquet

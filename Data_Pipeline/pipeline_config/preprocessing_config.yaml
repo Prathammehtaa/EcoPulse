@@ -1,6 +1,6 @@
 gcs:
-  project_id: "ecopulse-mlops-487708"
-  bucket: "ecopulse"
+  project_id: "ecopulse-492814"
+  bucket: "ecopulse-lakehouse"
   paths:
     raw_grid: "raw/grid_signals"
     raw_weather: "raw/weather"
@@ -42,8 +42,8 @@ regions:
 
 # ---- Training Window ----
 training_window:
-  start: "2023-01-01"
-  end: "2025-12-31"
+  start: "2019-01-01"
+  end: "2026-04-07"
 
 # ---- Grid Preprocessing ----
 grid:

@@ -1,0 +1,3 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+Fall,1440,32.61,50.0,-34.78,False,False
+Summer,2976,67.39,50.0,34.78,False,False

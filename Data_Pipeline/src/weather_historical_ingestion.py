@@ -66,6 +66,12 @@ def blob_exists_and_nonempty(bucket, blob_path: str, min_bytes: int = 10) -> boo
     return size >= min_bytes
 
 
+def local_file_exists_nonempty(relative_path: str, min_bytes: int = 10) -> bool:
+    """Returns True if local file exists and is larger than min_bytes."""
+    local_path = DATA_DIR / relative_path.lstrip("/\\")
+    return local_path.exists() and local_path.stat().st_size >= min_bytes
+
+
 def get_weather_df(api_response: dict) -> pd.DataFrame | None:
     """
     Transforms API response into a DataFrame using UTC.
@@ -98,14 +104,18 @@ def fetch_and_store_chunk(
 ) -> None:
     """
     Fetch one weather chunk and store locally + GCS.
-    Supports idempotency by skipping existing non-empty blobs.
+    Skips only if the chunk already exists in both GCS and local.
     """
     filename = f"start={start_dt:%Y%m%dT%H%M%SZ}_end={end_dt:%Y%m%dT%H%M%SZ}.csv"
     relative_path = f"{gcs_subdir}/{loc['name']}/{filename}"
 
-    if skip_if_exists and blob_exists_and_nonempty(bucket, relative_path, min_bytes=min_bytes):
-        print(f"Skipping existing blob → gs://{bucket_name}/{relative_path}")
-        return
+    if skip_if_exists:
+        exists_gcs = blob_exists_and_nonempty(bucket, relative_path, min_bytes=min_bytes)
+        exists_local = local_file_exists_nonempty(relative_path, min_bytes=min_bytes)
+
+        if exists_gcs and exists_local:
+            print(f"SKIP (exists in GCS and local) → gs://{bucket_name}/{relative_path}")
+            return
 
     params = {
         "latitude": loc["latitude"],

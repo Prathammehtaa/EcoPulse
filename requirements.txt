@@ -2,3 +2,5 @@ pandas
 scikit-learn
 tensorflow-data-validation
 apache-airflow-providers-slack
+dvc[gcs]
+gcsfs

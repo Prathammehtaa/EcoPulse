@@ -137,7 +137,7 @@ def read_all_regions(base_path: str, regions_config: List[dict], gcs_client: Opt
         folder_name = region["weather_folder"]
         zone = region["grid_zone"]
 
-        folder_path = os.path.join(base_path, folder_name)
+        folder_path = f"{base_path}/backfill/{region['weather_folder']}/".replace("\\", "/")
         logger.info(f"Reading weather: {folder_name} -> {zone}")
 
         df = read_weather_csvs(folder_path, gcs_client=gcs_client)
@@ -351,7 +351,7 @@ def main() -> None:
         format=log_cfg.get("format", "%(asctime)s | %(name)s | %(levelname)s | %(message)s"),
     )
 
-    df = process_weather_data(config, use_gcs=True)
+    df = process_weather_data(config, use_gcs=False)
     logger.info(f"Weather done! Shape: {df.shape} | Nulls: {int(df.isnull().sum().sum())}")
     logger.info(f"Columns: {df.columns.tolist()}")
 

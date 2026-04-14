@@ -1,0 +1,8 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+1,1488,16.58,14.29,16.06,False,False
+10,1488,16.58,14.29,16.06,False,False
+11,1440,16.04,14.29,12.28,False,False
+12,1488,16.58,14.29,16.06,False,False
+2,1344,14.97,14.29,4.79,False,False
+3,1488,16.58,14.29,16.06,False,False
+4,240,2.67,14.29,-81.31,True,False
