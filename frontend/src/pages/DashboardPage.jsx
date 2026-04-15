@@ -57,7 +57,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const start = Math.max(lowWindowIndex - 1, 0);
     const end = Math.min(lowWindowIndex + 2, 23);
     const formatHour = (hour) => `${String(hour % 24).padStart(2, "0")}:00`;
-    return { start, end, label: `Tonight ${formatHour(start)} - ${formatHour(end)}` };
+    return { start, end, label: `${formatHour(start)} - ${formatHour(end)}` };
   }, [lowWindowIndex]);
 
   const recommendedStart = useMemo(() => {
@@ -120,32 +120,17 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
       <section className="hero-banner">
         <div className="hero-banner-main">
           <div className="hero-banner-copy">
-            <h2>Good afternoon, {username}</h2>
-            <p>Grid carbon is lower in {ZONE_LABELS[zone]}. This is a strong window to run flexible workloads.</p>
-            <div className="hero-insight-grid">
-              <article className="hero-insight-card">
-                <span>Best live region</span>
-                <strong>{ZONE_LABELS[bestRegion.zone] ?? bestRegion.zone}</strong>
-                <small>{bestRegion.intensity} gCO2/kWh right now</small>
-              </article>
-              <article className="hero-insight-card">
-                <span>Carbon-aware action</span>
-                <strong>Shift flexible jobs tonight</strong>
-                <small>Use cleaner windows to reduce emissions without changing workload size.</small>
-              </article>
-            </div>
-          </div>
+            <h2>Good Afternoon, {username}</h2>
+              <p>Grid carbon is lower in {ZONE_LABELS[zone]}. This is a strong window to run flexible workloads.</p>
+                <div style={{marginTop: "12px", display: "flex", alignItems: "center", gap: "10px"}}>
+              <span style={{color: "var(--green-300)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.05em"}}>Best live region</span>
+            <span style={{color: "white", fontWeight: "700", fontSize: "1.1rem"}}>{ZONE_LABELS[bestRegion.zone] ?? bestRegion.zone}</span>
+          <span style={{color: "#d6f5e8", fontSize: "0.9rem"}}>· {bestRegion.intensity} gCO2/kWh</span>
+        </div>
+        </div>
           <div className="hero-best-window">
             <div className="hero-best-window-label">Recommended green window</div>
             <div className="hero-best-window-time">{recommendedWindow.label}</div>
-            <div className="hero-best-window-note">
-              Low-carbon interval identified by the XGBoost model.
-            </div>
-            <div className="hero-best-window-meta">
-              <span>CO2 saved <strong>24.8 kg</strong></span>
-              <span>Delay <strong>{averageDelay}h</strong></span>
-              <span>SLA risk <strong>None</strong></span>
-            </div>
             <div className="hero-best-window-actions">
               <button className="primary-action inline" onClick={approveRecommendedWindow}>Schedule Workload</button>
             </div>

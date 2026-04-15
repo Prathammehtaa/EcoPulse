@@ -15,11 +15,10 @@ function pointY(value, min, max, height, padding) {
   return height - padding - ((value - min) / Math.max(max - min, 1)) * (height - padding * 2);
 }
 
-function buildAreaPath(values, indexes, width, height, padding, min, max) {
-  if (!indexes.length) return "";
-  const points = indexes.map((index) => {
+function buildFullAreaPath(values, width, height, padding, min, max) {
+  const points = values.map((value, index) => {
     const x = padding + (index * (width - padding * 2)) / (values.length - 1);
-    const y = pointY(values[index], min, max, height, padding);
+    const y = pointY(value, min, max, height, padding);
     return { x, y };
   });
 
@@ -49,15 +48,18 @@ export default function SimpleChart({ values, placementIndexes = [] }) {
     return Math.round(max - (max - min) * ratio);
   });
   const labels = ["Now", "2h", "4h", "6h", "8h", "10h", "12h", "14h", "16h", "18h", "20h", "22h", "24h"];
-  const greenIndexes = values.map((value, index) => (value <= 160 ? index : -1)).filter((index) => index !== -1);
-  const redIndexes = values.map((value, index) => (value >= 220 ? index : -1)).filter((index) => index !== -1);
-  const greenAreaPath = buildAreaPath(values, greenIndexes, width, height, padding, min, max);
-  const redAreaPath = buildAreaPath(values, redIndexes, width, height, padding, min, max);
+  const areaPath = buildFullAreaPath(values, width, height, padding, min, max);
 
   return (
     <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Forecast chart">
-      {greenAreaPath ? <path d={greenAreaPath} className="chart-area-green" /> : null}
-      {redAreaPath ? <path d={redAreaPath} className="chart-area-red" /> : null}
+      <defs>
+        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4fc988" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#4fc988" stopOpacity="0.03" />
+        </linearGradient>
+      </defs>
+
+      <path d={areaPath} fill="url(#areaGradient)" />
 
       {ticks.map((tick, index) => {
         const y = pointY(tick, min, max, height, padding);

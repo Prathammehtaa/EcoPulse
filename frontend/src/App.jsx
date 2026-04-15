@@ -4,6 +4,8 @@ import Sidebar from "./components/Sidebar";
 import DashboardPage from "./pages/DashboardPage";
 import SchedulerPage from "./pages/SchedulerPage";
 import AlertsPage from "./pages/AlertsPage";
+import LandingPage from "./pages/LandingPage";
+
 import {
   ApiPage,
   DriftPage,
@@ -19,7 +21,8 @@ const initialState = {
   username: "",
   role: "user",
   page: "dashboard",
-  workloadHistory: []
+  workloadHistory: [],
+  showLanding: true
 };
 
 const STORAGE_KEY = "ecopulse-session-v1";
@@ -32,7 +35,8 @@ function loadStoredSession() {
     return {
       ...initialState,
       ...parsed,
-      workloadHistory: Array.isArray(parsed.workloadHistory) ? parsed.workloadHistory : []
+      workloadHistory: Array.isArray(parsed.workloadHistory) ? parsed.workloadHistory : [],
+      showLanding: false
     };
   } catch {
     return initialState;
@@ -46,6 +50,16 @@ export default function App() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   }, [session]);
 
+  // Show landing page first
+  if (session.showLanding) {
+    return (
+      <LandingPage
+        onSignIn={() => setSession((prev) => ({ ...prev, showLanding: false }))}
+      />
+    );
+  }
+
+  // Show login if not logged in
   if (!session.loggedIn) {
     return (
       <LoginPage
@@ -55,6 +69,7 @@ export default function App() {
             loggedIn: true,
             username,
             role,
+            showLanding: false,
             page: role === "admin" ? "metrics" : "dashboard"
           })
         }
@@ -112,7 +127,7 @@ export default function App() {
         onNavigate={(page) => setSession((prev) => ({ ...prev, page }))}
         onLogout={() => {
           window.localStorage.removeItem(STORAGE_KEY);
-          setSession(initialState);
+          setSession({ ...initialState, showLanding: true });
         }}
       />
       <main className="app-content">{renderPage()}</main>

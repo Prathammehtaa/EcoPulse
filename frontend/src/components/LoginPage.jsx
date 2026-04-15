@@ -27,7 +27,7 @@ export default function LoginPage({ onLogin }) {
           <LogoMark className="eco-logo large" />
         </div>
         <h1>
-          <h1><span style={{color: "#4fc988"}}>Eco</span><span style={{color: "white"}}>Pulse</span></h1>
+          <span style={{color: "#4fc988"}}>Eco</span><span style={{color: "white"}}>Pulse</span>
         </h1>
         <p>
           Intelligent carbon-aware orchestration with human in the loop decisions for greener,
@@ -59,29 +59,36 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div className="login-fields">
-          <input
-            type="email"
-            placeholder=""
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <div className="password-field">
+          <label>
+            Username
             <input
-              type={showPassword ? "text" : "password"}
+              type="email"
               placeholder=""
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword((current) => !current)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? "🙈" : "👁"}
-            </button>
-          </div>
+          </label>
+          <label>
+            Password
+            <div className="password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder=""
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </label>
         </div>
+
         {error ? <div className="form-error">{error}</div> : null}
         <button className="primary-action" type="submit">
           Sign in to EcoPulse
