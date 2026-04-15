@@ -1,5 +1,15 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
 import { useMemo, useState } from "react";
 import { forecast24h, getZoneDisplayName, regions } from "../mockData";
+=======
+import { useState, useEffect } from "react";
+import { getRegions, predict as apiPredict } from "../api";
+>>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+import { useMemo, useState } from "react";
+import { forecast24h, getZoneDisplayName, regions } from "../mockData";
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
 
 const ZONE_LABELS = {
   "US-MIDA-PJM": "Northern Virginia Region",
@@ -78,11 +88,23 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
         <div className="form-grid three">
           <label>
             Zone
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
                   {region.name}
                 </option>
+<<<<<<< HEAD
+=======
+            <select value={zone} onChange={(e) => setZone(e.target.value)}>
+              {regions.map((r) => (
+                <option key={r.zone} value={r.zone}>{ZONE_LABELS[r.zone]}</option>
+>>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
               ))}
             </select>
           </label>
@@ -121,11 +143,23 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
           </label>
           <label>
             Zone
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
                   {region.name}
                 </option>
+<<<<<<< HEAD
+=======
+            <select value={zone} onChange={(e) => setZone(e.target.value)}>
+              {regions.map((r) => (
+                <option key={r.zone} value={r.zone}>{ZONE_LABELS[r.zone]}</option>
+>>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
               ))}
             </select>
           </label>
@@ -196,7 +230,15 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
               {workloadHistory.map((item, index) => (
                 <tr key={`${item.name}-${index}`}>
                   <td>{item.name}</td>
+<<<<<<< HEAD
+<<<<<<< HEAD
                   <td>{getZoneDisplayName(item.zone)}</td>
+=======
+                  <td>{ZONE_LABELS[item.zone] ?? item.zone}</td>
+>>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+                  <td>{getZoneDisplayName(item.zone)}</td>
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
                   <td>{item.recommendedStart ?? "-"}</td>
                   <td>{item.energyKwh} kWh</td>
                   <td>{item.priorityHours ?? 0}h</td>
