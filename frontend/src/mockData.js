@@ -1,6 +1,7 @@
 export const regions = [
   {
     zone: "US-MIDA-PJM",
+    name: "Northern Virginia",
     intensity: 287,
     bucket: "Medium (200-350)",
     carbonFreePct: 18.4,
@@ -8,24 +9,26 @@ export const regions = [
   },
   {
     zone: "US-NW-PACW",
+    name: "Portland Oregon",
     intensity: 134,
     bucket: "Low (100-200)",
     carbonFreePct: 61.2,
     renewablePct: 58.3
-  },
-  {
-    zone: "US-NE-ISNE",
-    intensity: 176,
-    bucket: "Low (100-200)",
-    carbonFreePct: 44.7,
-    renewablePct: 39.5
   }
 ];
 
+export const zoneDisplayNames = {
+  "US-MIDA-PJM": "Northern Virginia",
+  "US-NW-PACW": "Portland Oregon"
+};
+
+export function getZoneDisplayName(zone) {
+  return zoneDisplayNames[zone] ?? zone;
+}
+
 export const forecast24h = {
   "US-MIDA-PJM": [279, 268, 254, 243, 232, 221, 208, 198, 205, 219, 237, 251, 243, 226, 210, 196, 188, 176, 162, 149, 142, 136, 131, 138],
-  "US-NW-PACW": [141, 138, 134, 136, 142, 148, 157, 169, 177, 184, 191, 197, 189, 180, 170, 161, 153, 146, 138, 130, 122, 118, 121, 126],
-  "US-NE-ISNE": [176, 171, 167, 162, 158, 149, 141, 133, 128, 124, 119, 116, 121, 129, 138, 146, 154, 165, 173, 184, 191, 199, 188, 180]
+  "US-NW-PACW": [141, 138, 134, 136, 142, 148, 157, 169, 177, 184, 191, 197, 189, 180, 170, 161, 153, 146, 138, 130, 122, 118, 121, 126]
 };
 
 export const alerts = [
@@ -38,14 +41,14 @@ export const alerts = [
   },
   {
     type: "success",
-    title: "Carbon drop - US-MIDA-PJM resolved",
+    title: "Carbon drop - Northern Virginia resolved",
     detail: "Grid dropped below threshold. Workloads were scheduled.",
     time: "2 hrs ago",
     active: false
   },
   {
     type: "warning",
-    title: "High carbon - US-NW-PACW elevated",
+    title: "High carbon - Portland Oregon elevated",
     detail: "Intensity at 312 gCO2/kWh. Consider deferring non-urgent workloads.",
     time: "3 hrs ago",
     active: false
@@ -84,7 +87,7 @@ export const usersSeed = [
 
 export const logs = [
   ["10:49", "INFO", "MLflow run - XGBoost 1h - MAE 25.14 RMSE 11.2 R2 0.94 - artifacts saved"],
-  ["10:45", "INFO", "Workload approved - ML retraining - US-MIDA-PJM - CO2 saved 24.8 kg"],
+  ["10:45", "INFO", "Workload approved - ML retraining - Northern Virginia - CO2 saved 24.8 kg"],
   ["10:30", "WARN", "Drift alert - wind_speed_100m_ms PSI 0.28 > threshold 0.2"],
   ["09:58", "INFO", "GCS fetch - ecopulse-shared-data - 1440 rows - parquet loaded"],
   ["09:45", "INFO", "Model retrain - LightGBM 6h - R2 0.89 - pushed to registry"]

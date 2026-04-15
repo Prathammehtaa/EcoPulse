@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getRegions, predict as apiPredict } from "../api";
+import { useMemo, useState } from "react";
+import { forecast24h, getZoneDisplayName, regions } from "../mockData";
 
 const ZONE_LABELS = {
   "US-MIDA-PJM": "Northern Virginia Region",
@@ -78,9 +78,11 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
         <div className="form-grid three">
           <label>
             Zone
-            <select value={zone} onChange={(e) => setZone(e.target.value)}>
-              {regions.map((r) => (
-                <option key={r.zone} value={r.zone}>{ZONE_LABELS[r.zone]}</option>
+            <select value={zone} onChange={(event) => setZone(event.target.value)}>
+              {regions.map((region) => (
+                <option key={region.zone} value={region.zone}>
+                  {region.name}
+                </option>
               ))}
             </select>
           </label>
@@ -119,9 +121,11 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
           </label>
           <label>
             Zone
-            <select value={zone} onChange={(e) => setZone(e.target.value)}>
-              {regions.map((r) => (
-                <option key={r.zone} value={r.zone}>{ZONE_LABELS[r.zone]}</option>
+            <select value={zone} onChange={(event) => setZone(event.target.value)}>
+              {regions.map((region) => (
+                <option key={region.zone} value={region.zone}>
+                  {region.name}
+                </option>
               ))}
             </select>
           </label>
@@ -192,7 +196,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
               {workloadHistory.map((item, index) => (
                 <tr key={`${item.name}-${index}`}>
                   <td>{item.name}</td>
-                  <td>{ZONE_LABELS[item.zone] ?? item.zone}</td>
+                  <td>{getZoneDisplayName(item.zone)}</td>
                   <td>{item.recommendedStart ?? "-"}</td>
                   <td>{item.energyKwh} kWh</td>
                   <td>{item.priorityHours ?? 0}h</td>
