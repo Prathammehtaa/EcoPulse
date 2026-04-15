@@ -63,7 +63,7 @@ export default function LoginPage({ onLogin }) {
             Username
             <input
               type="email"
-              placeholder=""
+              placeholder="Email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
