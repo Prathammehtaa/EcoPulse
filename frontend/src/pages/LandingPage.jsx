@@ -23,7 +23,7 @@ const styles = `
     border-bottom:1px solid rgba(15,61,40,0.1);
   }
   .ep-nav-logo { display:flex;align-items:center;gap:10px;cursor:pointer;border:none;background:none; }
-  .ep-nav-logo-icon { width:34px;height:34px;background:var(--g800);border-radius:10px;display:flex;align-items:center;justify-content:center; }
+  .ep-nav-logo-icon { width:34px;height:34px;display:flex;align-items:center;justify-content:center; }
   .ep-nav-logo-icon svg { width:18px;height:18px; }
   .ep-nav-brand { font-size:17px;font-weight:600;color:var(--g800);letter-spacing:-0.3px;font-family:var(--fn); }
   .ep-nav-links { display:flex;align-items:center;gap:32px; }
@@ -211,14 +211,8 @@ const styles = `
 `;
 
 // ─── Logo SVG ────────────────────────────────────────────────────────────────
-function Logo({ size = 18 }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width={size} height={size}>
-      <path d="M12 3C8 3 5 7 5 11c0 2.5 1.2 4.7 3 6.1V19h8v-1.9c1.8-1.4 3-3.6 3-6.1 0-4-3-8-7-8z" fill="#4fc988" />
-      <path d="M10 19v2h4v-2" stroke="#4fc988" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M12 7v8M9 10l3-3 3 3" stroke="#0f3d28" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+function Logo({ size = 34 }) {
+  return <img src="/ecopulse_logo_v2.svg" width={size} height={size} alt="EcoPulse" style={{ display: "block" }} />;
 }
 
 // ─── Scroll reveal hook ───────────────────────────────────────────────────────
@@ -519,7 +513,7 @@ function Footer({ onNav }) {
     <footer className="ep-footer">
       <div className="ep-footer-brand">
         <div className="ep-nav-logo-icon" style={{ width: 28, height: 28, borderRadius: 8 }}>
-          <Logo size={14} />
+          <Logo size={28} />
         </div>
         <span>EcoPulse</span>
       </div>
