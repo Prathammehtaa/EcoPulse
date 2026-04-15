@@ -36,7 +36,7 @@ function loadStoredSession() {
       ...initialState,
       ...parsed,
       workloadHistory: Array.isArray(parsed.workloadHistory) ? parsed.workloadHistory : [],
-      showLanding: false
+      showLanding: true
     };
   } catch {
     return initialState;
