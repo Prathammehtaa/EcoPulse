@@ -3,7 +3,7 @@ import LogoMark from "./LogoMark";
 
 export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("ecopulse");
   const [role, setRole] = useState("user");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
