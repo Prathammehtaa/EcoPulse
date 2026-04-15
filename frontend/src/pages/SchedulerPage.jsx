@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { forecast24h, getZoneDisplayName, regions } from "../mockData";
+import { useEffect, useState } from "react";
+import { getZoneDisplayName } from "../mockData";
+import { getRegions, predict as apiPredict } from "../api";
 
 const ZONE_LABELS = {
   "US-MIDA-PJM": "Northern Virginia Region",
@@ -81,7 +82,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
-                  {region.name}
+                  {ZONE_LABELS[region.zone] ?? region.zone}
                 </option>
               ))}
             </select>
@@ -124,7 +125,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
-                  {region.name}
+                  {ZONE_LABELS[region.zone] ?? region.zone}
                 </option>
               ))}
             </select>
