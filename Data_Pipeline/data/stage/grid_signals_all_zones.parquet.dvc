@@ -1,5 +1,0 @@
-outs:
-- md5: a79b8edf99a9fa6020a9d97ec5bc6309
-  size: 1781663
-  hash: md5
-  path: grid_signals_all_zones.parquet

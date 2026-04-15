@@ -1,0 +1,6 @@
+slice_value,count,percentage,expected_pct,deviation_pct,is_underrepresented,is_overrepresented
+High,1215,27.51,20.0,37.55,False,False
+Low,605,13.7,20.0,-31.5,False,False
+Medium,1156,26.18,20.0,30.9,False,False
+Very High,1412,31.97,20.0,59.85,False,True
+Very Low,28,0.63,20.0,-96.85,True,False

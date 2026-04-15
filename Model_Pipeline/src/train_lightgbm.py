@@ -1,7 +1,7 @@
 """
 EcoPulse LightGBM Model Training
 =================================
-Trains LightGBM regressors for each forecast horizon (1h, 6h, 12h, 24h).
+Trains LightGBM regressors for each forecast horizon (1h, 12h, 24h).
 Same structure as XGBoost for fair comparison.
 
 Author: Aaditya Krishna (ML Modelling Lead)
@@ -19,6 +19,7 @@ import mlflow
 import mlflow.lightgbm
 import joblib
 from datetime import datetime
+from mlflow.models.signature import infer_signature
 
 from utils import (
     load_all_splits, prepare_Xy, align_columns,
@@ -27,6 +28,19 @@ from utils import (
     FORECAST_TARGETS, HORIZONS, MODELS_DIR, REPORTS_DIR,
     logger, get_timestamp
 )
+from mlflow_config import (
+    setup_mlflow, build_run_tags, get_performance_tier,
+    log_dataset_info, log_feature_importance_plot, log_residual_plot,
+    register_model, TRAINING_EXPERIMENT_NAME,
+)
+
+# GCP Artifact Registry push — opt-in via GCP_PUSH_MODELS=1
+_GCP_PUSH = os.getenv("GCP_PUSH_MODELS", "0") == "1"
+if _GCP_PUSH:
+    try:
+        from gcp_registry import push_after_mlflow_log, make_version_string
+    except ImportError:
+        _GCP_PUSH = False
 
 # ============================================================
 # LIGHTGBM HYPERPARAMETERS
@@ -47,7 +61,7 @@ LIGHTGBM_PARAMS = {
 
 
 def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PARAMS):
-    """Train LightGBM for one forecast horizon."""
+    """Train LightGBM for one forecast horizon with sample weights."""
     target_col = FORECAST_TARGETS[horizon]
     logger.info(f"Training LightGBM for {horizon}h horizon...")
 
@@ -59,6 +73,15 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
     # Align columns
     X_train, X_val, X_test, feature_cols = align_columns(X_train, X_val, X_test)
 
+    # Fairness-aware sample weights
+    ci = train_df["carbon_intensity_gco2_per_kwh"].loc[y_train.index]
+    sample_weights = np.ones(len(y_train))
+    sample_weights[ci < 100] = 3.0       # 3x weight for Very Low
+    sample_weights[(ci >= 100) & (ci < 200)] = 1.5  # 1.5x for Low
+    logger.info(f"  Sample weights: Very Low(3x)={int((ci < 100).sum())}, "
+                f"Low(1.5x)={int(((ci >= 100) & (ci < 200)).sum())}, "
+                f"Normal(1x)={int((ci >= 200).sum())}")
+
     logger.info(f"  Features: {len(feature_cols)}, "
                 f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
@@ -66,6 +89,7 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
     model = lgb.LGBMRegressor(**params)
     model.fit(
         X_train, y_train,
+        sample_weight=sample_weights,
         eval_set=[(X_val, y_val)],
         eval_metric="mae",
         callbacks=[
@@ -101,6 +125,10 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
     for _, row in importance_df.head(10).iterrows():
         print(f"    {row['feature']:<50} {row['importance']}")
 
+    # MLflow signature
+    X_sample = X_train.iloc[:50]
+    signature = infer_signature(X_sample, model.predict(X_sample))
+
     return {
         "model": model,
         "results": results,
@@ -108,6 +136,12 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=LIGHTGBM_PAR
         "feature_cols": feature_cols,
         "best_iteration": best_iteration,
         "horizon": horizon,
+        "signature": signature,
+        "X_sample": X_sample,
+        "preds_by_split": {
+            "val": (y_val, model.predict(X_val)),
+            "test": (y_test, model.predict(X_test)),
+        },
     }
 
 
@@ -154,21 +188,53 @@ def train_all_horizons():
 
             mlflow.log_metric("best_iteration", result["best_iteration"])
 
-            # Log model
+            # --- Performance tier tag ---
+            tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
+            mlflow.set_tag("perf_tier", tier)
+
+            # --- Log model with schema signature ---
             mlflow.lightgbm.log_model(
                 result["model"],
                 artifact_path=f"lightgbm_{horizon}h",
+                signature=result["signature"],
+                input_example=result["X_sample"],
             )
 
-            # Save locally
+            # --- Save model locally ---
             save_model(result["model"], f"lightgbm_{horizon}h")
 
-            # Save feature importance
+            # --- Feature importance CSV + plot ---
             importance_path = os.path.join(REPORTS_DIR, f"lgb_importance_{horizon}h.csv")
             result["importance"].to_csv(importance_path, index=False)
-            mlflow.log_artifact(importance_path)
+            mlflow.log_artifact(importance_path, artifact_path="feature_importance")
+            log_feature_importance_plot(
+                result["importance"], horizon, "lightgbm", REPORTS_DIR
+            )
 
-            # Collect test results
+            # --- Residual plots for val and test splits ---
+            for split_name in ["val", "test"]:
+                y_true, y_pred = result["preds_by_split"][split_name]
+                log_residual_plot(y_true, y_pred, split_name, horizon, "lightgbm", REPORTS_DIR)
+
+            # --- Opt-in model registry ---
+            run_id = mlflow.active_run().info.run_id
+            register_model(run_id, f"lightgbm_{horizon}h", horizon, "lightgbm")
+
+            # --- GCP Artifact Registry push (opt-in) ---
+            if _GCP_PUSH:
+                push_after_mlflow_log(
+                    model_path=os.path.join(MODELS_DIR, f"lightgbm_{horizon}h.joblib"),
+                    model_name=f"lightgbm_{horizon}h",
+                    version=os.getenv("RETRAIN_VERSION") or make_version_string("lightgbm", horizon),
+                    mlflow_run_id=run_id,
+                    horizon=horizon,
+                    model_type="lightgbm",
+                    metrics=result["results"]["test"],
+                    performance_tier=tier,
+                    auto_promote=True,
+                )
+
+            # --- Collect test results for summary ---
             test_metrics = result["results"]["test"].copy()
             test_metrics["model"] = f"LightGBM ({horizon}h)"
             test_metrics["horizon"] = horizon

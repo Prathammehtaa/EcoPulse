@@ -27,7 +27,7 @@ export default function LoginPage({ onLogin }) {
           <LogoMark className="eco-logo large" />
         </div>
         <h1>
-          Eco<span>Pulse</span>
+          <h1><span style={{color: "#4fc988"}}>Eco</span><span style={{color: "white"}}>Pulse</span></h1>
         </h1>
         <p>
           Intelligent carbon-aware orchestration with human in the loop decisions for greener,

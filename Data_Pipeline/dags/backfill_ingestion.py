@@ -31,9 +31,15 @@ from grid_preprocessing import main as grid_preprocessing_main
 from weather_historical_ingestion import main as weather_ingestion_main
 from weather_preprocessing import main as weather_preprocessing_main
 from merge_and_features import main as merge_features_main
+from merge_validate import main as merge_validate_main
+from feature_engineering import main as feature_engineering_main
+from label_temporal_split import main as label_temporal_split_main
 from schema_validation_task import run_tfdv_schema_validation
+from tfdv_bias_analysis import main as tfdv_bias_analysis_main
+from bias_mitigation import main as bias_mitigation_main
 from alerts import get_recipients, notify_task_failure, notify_dag_failure, make_success_slack_callable
 
+from airflow.utils.email import send_email
 
 default_args = {
     "owner": "ecopulse",
@@ -41,8 +47,31 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(minutes=10),
     "on_failure_callback": notify_task_failure,     
-    "execution_timeout": timedelta(hours=2),         
+    "execution_timeout": timedelta(hours=3),         
 }
+
+def notify_success_email(**context):
+    """
+    Success email using the SAME path as your failure emails:
+    airflow.utils.email.send_email + recipients from alerts.get_recipients()
+    """
+    dag = context.get("dag")
+    dag_id = getattr(dag, "dag_id", "unknown")
+    run_id = context.get("run_id")
+    ts = context.get("ts")
+
+    subject = f"[SUCCESS] EcoPulse Backfill Ingestion Complete | {dag_id}"
+    html_content = f"""
+    <p>Hi team,</p>
+    <p><b>EcoPulse Backfill grid ingestion completed successfully.</b></p>
+    <ul>
+        <li><b>DAG:</b> {dag_id}</li>
+        <li><b>Run ID:</b> {run_id}</li>
+        <li><b>Execution Time:</b> {ts}</li>
+    </ul>
+    <p>Best,<br/>EcoPulse Dev Team</p>
+    """
+    send_email(to=get_recipients(), subject=subject, html_content=html_content)
 
 with DAG(
     dag_id="ecopulse_full_backfill_pipeline",
@@ -101,12 +130,41 @@ with DAG(
     )
 
     merge_and_features = PythonOperator(
-        task_id="merge_and_feature_engineering",
+        task_id="merge",
         python_callable=merge_features_main,
         sla=timedelta(hours=2),
     )
 
+    merge_validate = PythonOperator(
+        task_id="merge_validate",
+        python_callable=merge_validate_main,
+        sla=timedelta(hours=2),
+    )
 
+    feature_engineering = PythonOperator(
+        task_id="feature_engineering",
+        python_callable=feature_engineering_main,
+        sla=timedelta(hours=2),
+    )
+
+    label_temporal_split = PythonOperator(
+        task_id="label_temporal_split",
+        python_callable=label_temporal_split_main,
+        sla=timedelta(hours=2),
+    )
+
+
+    tfdv_bias_analysis = PythonOperator(
+    task_id="tfdv_bias_analysis",
+    python_callable=tfdv_bias_analysis_main,
+    sla=timedelta(hours=2),
+)
+    
+    bias_mitigation = PythonOperator(
+    task_id="bias_mitigation",
+    python_callable=bias_mitigation_main,
+    sla=timedelta(hours=2),
+)
     schema_validation_tfdv = PythonOperator(
     task_id="schema_validation_tfdv",
     python_callable=run_tfdv_schema_validation,
@@ -120,21 +178,9 @@ with DAG(
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
-    notify_success_email = EmailOperator(
+    email_success = PythonOperator(
         task_id="email_success",
-        to=get_recipients(),
-        subject="EcoPulse Full Backfill Pipeline Complete",
-        html_content="""
-        <p>Hi team,</p>
-        <p>The <b>EcoPulse full historical pipeline</b> has completed successfully.</p>
-        <ul>
-            <li><b>DAG:</b> {{ dag.dag_id }}</li>
-            <li><b>Run ID:</b> {{ run_id }}</li>
-            <li><b>Execution Time:</b> {{ ts }}</li>
-        </ul>
-        <p>Grid + Weather ingestion, preprocessing, merge/features, and validation are complete.</p>
-        <p>Best,<br/>Ecopulse Dev Team</p>
-        """,
+        python_callable=notify_success_email,
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
@@ -142,4 +188,4 @@ with DAG(
 
     start >> [grid_pipeline, weather_pipeline]
     [grid_pipeline, weather_pipeline] >> join_before_merge
-    join_before_merge >> merge_and_features >> schema_validation_tfdv >> slack_success >> notify_success_email >> end
+    join_before_merge >> merge_and_features >> merge_validate >> feature_engineering >> label_temporal_split >> tfdv_bias_analysis >> bias_mitigation >> schema_validation_tfdv >> slack_success >> email_success >> end

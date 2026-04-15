@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def _load_config(project_root: Path) -> dict:
-    cfg_path = project_root / "config" / "preprocessing_config.yaml"
+    cfg_path = project_root / "pipeline_config" / "preprocessing_config.yaml"
     with open(cfg_path, "r") as f:
         return yaml.safe_load(f)
 
 
 def run_tfdv_schema_validation():
+    from schema_validation import validate_dataset
     """
     Loads datasets from local processed paths and validates them against baseline schemas.
     Returns True if all pass; raises if any fails (so Airflow marks task failed).

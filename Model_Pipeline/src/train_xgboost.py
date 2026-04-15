@@ -1,7 +1,7 @@
 """
 EcoPulse XGBoost Model Training
 ================================
-Trains XGBoost regressors for each forecast horizon (1h, 6h, 12h, 24h).
+Trains XGBoost regressors for each forecast horizon (1h, 12h, 24h).
 Uses validation set for early stopping, evaluates on held-out test set.
 Tracks all experiments in MLflow.
 Run: cd Model_Pipeline/src && python train_xgboost.py
@@ -18,6 +18,7 @@ import mlflow
 import mlflow.xgboost
 import joblib
 from datetime import datetime
+from mlflow.models.signature import infer_signature
 
 from utils import (
     load_all_splits, prepare_Xy, align_columns,
@@ -26,6 +27,19 @@ from utils import (
     FORECAST_TARGETS, HORIZONS, MODELS_DIR, REPORTS_DIR,
     logger, get_timestamp
 )
+from mlflow_config import (
+    setup_mlflow, build_run_tags, get_performance_tier,
+    log_dataset_info, log_feature_importance_plot, log_residual_plot,
+    register_model, TRAINING_EXPERIMENT_NAME,
+)
+
+# GCP Artifact Registry push — opt-in via GCP_PUSH_MODELS=1
+_GCP_PUSH = os.getenv("GCP_PUSH_MODELS", "0") == "1"
+if _GCP_PUSH:
+    try:
+        from gcp_registry import push_after_mlflow_log, make_version_string
+    except ImportError:
+        _GCP_PUSH = False
 
 # ============================================================
 # XGBOOST HYPERPARAMETERS
@@ -49,17 +63,12 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     """
     Train XGBoost for one forecast horizon.
 
-    WHAT'S HAPPENING:
     1. Prepare features (one-hot encode zone, drop targets/datetime)
-    2. Train XGBoost with early stopping on validation set
-    3. Evaluate on train, val, and test
-    4. Extract feature importances
-    5. Return everything for logging
-
-    WHY EARLY STOPPING:
-    We set n_estimators=500 (max trees), but early_stopping_rounds=30
-    means training stops if validation MAE doesn't improve for 30
-    consecutive rounds. This prevents overfitting automatically.
+    2. Compute fairness-aware sample weights
+    3. Train XGBoost with early stopping on validation set
+    4. Evaluate on train, val, and test
+    5. Extract feature importances
+    6. Return everything for logging
     """
     target_col = FORECAST_TARGETS[horizon]
     logger.info(f"Training XGBoost for {horizon}h horizon...")
@@ -72,6 +81,15 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     # Align columns across splits
     X_train, X_val, X_test, feature_cols = align_columns(X_train, X_val, X_test)
 
+    # Fairness-aware sample weights
+    ci = train_df["carbon_intensity_gco2_per_kwh"].loc[y_train.index]
+    sample_weights = np.ones(len(y_train))
+    sample_weights[ci < 100] = 3.0       # 3x weight for Very Low
+    sample_weights[(ci >= 100) & (ci < 200)] = 1.5  # 1.5x for Low
+    logger.info(f"  Sample weights: Very Low(3x)={int((ci < 100).sum())}, "
+                f"Low(1.5x)={int(((ci >= 100) & (ci < 200)).sum())}, "
+                f"Normal(1x)={int((ci >= 200).sum())}")
+
     logger.info(f"  Features: {len(feature_cols)}, "
                 f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
@@ -79,6 +97,7 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     model = xgb.XGBRegressor(**params)
     model.fit(
         X_train, y_train,
+        sample_weight=sample_weights,
         eval_set=[(X_val, y_val)],
         verbose=50
     )
@@ -110,6 +129,10 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
     for _, row in importance_df.head(10).iterrows():
         print(f"    {row['feature']:<50} {row['importance']:.4f}")
 
+    # MLflow signature
+    X_sample = X_train.iloc[:50]
+    signature = infer_signature(X_sample, model.predict(X_sample))
+
     return {
         "model": model,
         "results": results,
@@ -117,6 +140,12 @@ def train_single_horizon(train_df, val_df, test_df, horizon, params=XGBOOST_PARA
         "feature_cols": feature_cols,
         "best_iteration": best_iteration,
         "horizon": horizon,
+        "signature": signature,
+        "X_sample": X_sample,
+        "preds_by_split": {
+            "val": (y_val, model.predict(X_val)),
+            "test": (y_test, model.predict(X_test)),
+        },
     }
 
 
@@ -164,21 +193,53 @@ def train_all_horizons():
 
             mlflow.log_metric("best_iteration", result["best_iteration"])
 
-            # Log model to MLflow
+            # --- Performance tier tag ---
+            tier = get_performance_tier(result["results"]["test"]["mae"], horizon)
+            mlflow.set_tag("perf_tier", tier)
+
+            # --- Log model with schema signature ---
             mlflow.xgboost.log_model(
                 result["model"],
                 artifact_path=f"xgboost_{horizon}h",
+                signature=result["signature"],
+                input_example=result["X_sample"],
             )
 
-            # Save model locally
+            # --- Save model locally ---
             save_model(result["model"], f"xgboost_{horizon}h")
 
-            # Save feature importance
+            # --- Feature importance CSV + plot ---
             importance_path = os.path.join(REPORTS_DIR, f"xgb_importance_{horizon}h.csv")
             result["importance"].to_csv(importance_path, index=False)
-            mlflow.log_artifact(importance_path)
+            mlflow.log_artifact(importance_path, artifact_path="feature_importance")
+            log_feature_importance_plot(
+                result["importance"], horizon, "xgboost", REPORTS_DIR
+            )
 
-            # Collect test results for summary
+            # --- Residual plots for val and test splits ---
+            for split_name in ["val", "test"]:
+                y_true, y_pred = result["preds_by_split"][split_name]
+                log_residual_plot(y_true, y_pred, split_name, horizon, "xgboost", REPORTS_DIR)
+
+            # --- Opt-in model registry ---
+            run_id = mlflow.active_run().info.run_id
+            register_model(run_id, f"xgboost_{horizon}h", horizon, "xgboost")
+
+            # --- GCP Artifact Registry push (opt-in) ---
+            if _GCP_PUSH:
+                push_after_mlflow_log(
+                    model_path=os.path.join(MODELS_DIR, f"xgboost_{horizon}h.joblib"),
+                    model_name=f"xgboost_{horizon}h",
+                    version=os.getenv("RETRAIN_VERSION") or make_version_string("xgboost", horizon),
+                    mlflow_run_id=run_id,
+                    horizon=horizon,
+                    model_type="xgboost",
+                    metrics=result["results"]["test"],
+                    performance_tier=tier,
+                    auto_promote=True,
+                )
+
+            # --- Collect test results for summary ---
             test_metrics = result["results"]["test"].copy()
             test_metrics["model"] = f"XGBoost ({horizon}h)"
             test_metrics["horizon"] = horizon

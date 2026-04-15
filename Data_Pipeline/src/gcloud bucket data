@@ -1,0 +1,18 @@
+from google.cloud import storage
+import os
+
+def download_bucket_folder(bucket_name, source_folder, destination_dir):
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=source_folder)
+
+    for blob in blobs:
+        # Create local path
+        local_path = os.path.join(destination_dir, blob.name)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        # Download file
+        blob.download_to_filename(local_path)
+        print(f"Downloaded: {blob.name}")
+
+download_bucket_folder('ecopulse_bucket', 'weather_raw/', './local_data')

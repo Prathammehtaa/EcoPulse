@@ -44,7 +44,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
   const [zone, setZone] = useState("US-MIDA-PJM");
   const [energy, setEnergy] = useState(120);
   const [runtime, setRuntime] = useState(4);
-  const [horizon, setHorizon] = useState(6);
+  const [horizon, setHorizon] = useState(1);
   const [priorityHours, setPriorityHours] = useState(6);
   const [pendingRecommendation, setPendingRecommendation] = useState(null);
 
@@ -168,7 +168,6 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
             Forecast horizon
             <select value={horizon} onChange={(event) => setHorizon(Number(event.target.value))}>
               <option value={1}>1h</option>
-              <option value={6}>6h</option>
               <option value={12}>12h</option>
               <option value={24}>24h</option>
             </select>

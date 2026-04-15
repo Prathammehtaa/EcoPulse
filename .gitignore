@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+.json
 # Distribution / packaging
 .Python
 build/
@@ -15,6 +15,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+Data_Pipeline/data/
+logs/
 lib64/
 parts/
 sdist/
@@ -211,3 +213,16 @@ frontend-react/node_modules/
 frontend-react/dist/
  
  
+.cfg
+gcp-sa.json
+.DS_Store
+MLflow/
+.DS_Store
+MLflow/
+path/
+Model_Pipeline/mlruns/mlflow.db
+Model_Pipeline/models/*.joblib
+Model_Pipeline/mlruns/
+Model_Pipeline/reports/bias/
+Model_Pipeline/reports/*.csv
+Model_Pipeline/reports/*.png
