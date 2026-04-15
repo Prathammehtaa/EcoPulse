@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import SimpleChart from "../components/SimpleChart";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { forecast24h, getZoneDisplayName, regions } from "../mockData";
 =======
 import { getRegions, getForecast } from "../api";
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+import { forecast24h, getZoneDisplayName, regions } from "../mockData";
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
 
 function toneForValue(value) {
   if (value < 160) return "green";
@@ -62,15 +66,21 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const end = Math.min(lowWindowIndex + 2, 23);
     const formatHour = (hour) => `${String(hour % 24).padStart(2, "0")}:00`;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
 
     return {
       start,
       end,
       label: `${formatHour(start)} - ${formatHour(end)}`
     };
+<<<<<<< HEAD
 =======
     return { start, end, label: `Tonight ${formatHour(start)} - ${formatHour(end)}` };
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
   }, [lowWindowIndex]);
 
   const activeRegionName = getZoneDisplayName(zone);
@@ -119,12 +129,17 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const region = regions.find((r) => r.zone === item.zone);
     return {
 <<<<<<< HEAD
+<<<<<<< HEAD
       label: getZoneDisplayName(item.zone),
       value: `${region.intensity}`,
 =======
       label: ZONE_LABELS[item.zone],
       value: region ? `${region.intensity}` : "—",
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+      label: getZoneDisplayName(item.zone),
+      value: `${region.intensity}`,
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
       unit: "gCO2/kWh",
       note: item.note,
       tone: region ? toneForValue(region.intensity) : "gray",
@@ -151,16 +166,22 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const co2SavedKg = Number(Math.max(0, immediateCo2Kg - optimalCo2Kg).toFixed(3));
     onApproveRecommended({
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
       name: `Recommended window - ${getZoneDisplayName(zone)}`,
       zone,
       recommendedStart,
       energyKwh,
       priorityHours: recommendedWindow.start,
       runtimeHours,
+<<<<<<< HEAD
 =======
       name: `Recommended window - ${ZONE_LABELS[zone]}`, zone, recommendedStart,
       energyKwh, priorityHours: recommendedWindow.start, runtimeHours,
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
       recommendedDelayHours: recommendedWindow.start,
       expectedIntensity, immediateIntensity, co2SavedKg,
     });
@@ -174,6 +195,9 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
         <div className="hero-banner-main">
           <div className="hero-banner-copy">
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
             <span className="hero-kicker">Live carbon overview</span>
             <div className="hero-copy-topline">
               <div className="hero-copy-intro">
@@ -186,6 +210,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
               <article className="hero-insight-card">
                 <span>Best live region</span>
                 <strong>{getZoneDisplayName(bestRegion.zone)}</strong>
+<<<<<<< HEAD
 =======
             <h2>Good afternoon, {username}</h2>
             <p>Grid carbon is lower in {ZONE_LABELS[zone]}. This is a strong window to run flexible workloads.</p>
@@ -194,6 +219,8 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
                 <span>Best live region</span>
                 <strong>{ZONE_LABELS[bestRegion.zone] ?? bestRegion.zone}</strong>
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
                 <small>{bestRegion.intensity} gCO2/kWh right now</small>
               </article>
             </div>
@@ -201,6 +228,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
           <div className="hero-best-window">
             <div className="hero-best-window-label">Recommended green window</div>
             <div className="hero-best-window-time">{recommendedWindow.label}</div>
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
             <div className="hero-best-window-note">
@@ -212,6 +240,8 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
               <span>SLA risk <strong>None</strong></span>
             </div>
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
             <div className="hero-best-window-actions">
               <button className="primary-action inline" onClick={approveRecommendedWindow}>Schedule Workload</button>
             </div>
@@ -233,6 +263,9 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
         <div className="forecast-panel-header">
           <div>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
             <h3>24-hour carbon intensity forecast - {getZoneDisplayName(zone)}</h3>
             <div className="forecast-panel-controls">
               <p>Updated 4 min ago</p>
@@ -241,6 +274,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
                   <option key={item.zone} value={item.zone}>
                     {item.name}
                   </option>
+<<<<<<< HEAD
 =======
             <h3>24-hour carbon intensity forecast - {ZONE_LABELS[zone]}</h3>
             <div className="forecast-panel-controls">
@@ -249,6 +283,8 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
                 {filteredRegions.map((item) => (
                   <option key={item.zone} value={item.zone}>{ZONE_LABELS[item.zone]}</option>
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
                 ))}
               </select>
             </div>
@@ -262,6 +298,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
           </div>
         </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 
         <SimpleChart values={forecast} placementIndexes={placementIndexes} workloadWindows={workloadWindows} />
 
@@ -271,6 +308,11 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
         )}
         {loading && <p style={{ padding: "1rem", color: "#9fe1cb" }}>Loading forecast...</p>}
 >>>>>>> 974b4e31eab3bc79ec988f0e849161b6a5022e80
+=======
+
+        <SimpleChart values={forecast} placementIndexes={placementIndexes} workloadWindows={workloadWindows} />
+
+>>>>>>> d8ba4f8b707174db92668c6ccf394e7bd956ea98
         <div className="forecast-summary">
           Lowest 24h intensity: <strong>{lowWindow} gCO2/kWh</strong>
         </div>
