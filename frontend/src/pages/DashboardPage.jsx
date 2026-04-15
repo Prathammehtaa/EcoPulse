@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SimpleChart from "../components/SimpleChart";
 import { forecast24h, getZoneDisplayName, regions } from "../mockData";
 
@@ -8,26 +8,54 @@ function toneForValue(value) {
   return "red";
 }
 
+const ZONE_LABELS = {
+  "US-MIDA-PJM": "Northern Virginia Region",
+  "US-NW-PACW": "Portland Oregon Region",
+};
+
 export default function DashboardPage({ username, workloadHistory, onNavigate, onApproveRecommended }) {
   const [zone, setZone] = useState("US-MIDA-PJM");
-  const forecast = forecast24h[zone];
-  const current = forecast[0];
-  const lowWindow = Math.min(...forecast);
-  const lowWindowIndex = forecast.indexOf(lowWindow);
+  const [regions, setRegions] = useState([]);
+  const [forecast, setForecast] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString());
+
+  const allowedZones = ["US-MIDA-PJM", "US-NW-PACW"];
+
+  const fetchData = () => {
+    getRegions().then(setRegions).catch(console.error);
+    getForecast(zone, 1)
+      .then((data) => {
+        setForecast(data.values);
+        setLoading(false);
+        setLastUpdated(new Date().toLocaleTimeString());
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 60000);
+    return () => clearInterval(interval);
+  }, [zone]);
+
+  const current = forecast[0] ?? 0;
+  const lowWindow = forecast.length > 0 ? Math.min(...forecast) : 0;
+  const lowWindowIndex = forecast.length > 0 ? forecast.indexOf(lowWindow) : 0;
   const savedToday = workloadHistory.reduce((sum, item) => sum + item.co2SavedKg, 0);
   const averageDelay =
     workloadHistory.length > 0
-      ? (
-          workloadHistory.reduce((sum, item) => sum + (item.recommendedDelayHours ?? 0), 0) /
-          workloadHistory.length
-        ).toFixed(1)
+      ? (workloadHistory.reduce((sum, item) => sum + (item.recommendedDelayHours ?? 0), 0) / workloadHistory.length).toFixed(1)
       : "0.0";
-  const bestRegion = regions.reduce((best, item) => (item.intensity < best.intensity ? item : best), regions[0]);
+
+  const filteredRegions = regions.filter((r) => allowedZones.includes(r.zone));
+  const bestRegion = filteredRegions.length > 0
+    ? filteredRegions.reduce((best, item) => (item.intensity < best.intensity ? item : best), filteredRegions[0])
+    : { zone: "—", intensity: 0 };
 
   const recommendedWindow = useMemo(() => {
     const start = Math.max(lowWindowIndex - 1, 0);
     const end = Math.min(lowWindowIndex + 2, 23);
-
     const formatHour = (hour) => `${String(hour % 24).padStart(2, "0")}:00`;
 
     return {
@@ -47,9 +75,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
 
   const placementIndexes = useMemo(() => {
     const points = [];
-    for (let i = recommendedWindow.start; i <= recommendedWindow.end; i += 1) {
-      points.push(i);
-    }
+    for (let i = recommendedWindow.start; i <= recommendedWindow.end; i += 1) points.push(i);
     return points;
   }, [recommendedWindow]);
   const workloadWindows = useMemo(() => {
@@ -82,60 +108,24 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     { zone: "US-MIDA-PJM", note: "Medium - consider deferring" },
     { zone: "US-NW-PACW", note: "Low carbon - good window" }
   ].map((item) => {
-    const region = regions.find((entry) => entry.zone === item.zone);
+    const region = regions.find((r) => r.zone === item.zone);
     return {
       label: getZoneDisplayName(item.zone),
       value: `${region.intensity}`,
       unit: "gCO2/kWh",
       note: item.note,
-      tone: toneForValue(region.intensity)
+      tone: region ? toneForValue(region.intensity) : "gray",
     };
   });
 
   const cards = [
     ...regionCards,
-    {
-      label: "CO2 SAVED TODAY",
-      value: `${savedToday.toFixed(1)}`,
-      unit: "kg",
-      note: "Tracked from approved schedules",
-      tone: "green"
-    },
-    {
-      label: "AVERAGE DELAY",
-      value: `${averageDelay}`,
-      unit: "hrs",
-      note: "Average approved wait time",
-      tone: "blue"
-    },
-    {
-      label: "1H FORECAST",
-      value: `${forecast[1]}`,
-      unit: "gCO2",
-      note: "Stable - good window",
-      tone: toneForValue(forecast[1])
-    },
-    {
-      label: "6H FORECAST",
-      value: `${forecast[5]}`,
-      unit: "gCO2",
-      note: "Rising - consider deferring",
-      tone: toneForValue(forecast[5])
-    },
-    {
-      label: "24H FORECAST",
-      value: `${forecast[23]}`,
-      unit: "gCO2",
-      note: "Late-night recovery",
-      tone: toneForValue(forecast[23])
-    },
-    {
-      label: "CO2 SAVED TILL NOW",
-      value: `${savedToday.toFixed(1)}`,
-      unit: "kg",
-      note: `${workloadHistory.length} workloads optimized`,
-      tone: "green"
-    }
+    { label: "CO2 SAVED TODAY", value: `${savedToday.toFixed(1)}`, unit: "kg", note: "Tracked from approved schedules", tone: "green" },
+    { label: "AVERAGE DELAY", value: `${averageDelay}`, unit: "hrs", note: "Average approved wait time", tone: "blue" },
+    { label: "1H FORECAST", value: `${forecast[1] ?? "—"}`, unit: "gCO2", note: "Stable - good window", tone: toneForValue(forecast[1] ?? 0) },
+    { label: "12H FORECAST", value: `${forecast[11] ?? "—"}`, unit: "gCO2", note: "Rising - consider deferring", tone: toneForValue(forecast[11] ?? 0) },
+    { label: "24H FORECAST", value: `${forecast[23] ?? "—"}`, unit: "gCO2", note: "Late-night recovery", tone: toneForValue(forecast[23] ?? 0) },
+    { label: "CO2 SAVED TILL NOW", value: `${savedToday.toFixed(1)}`, unit: "kg", note: `${workloadHistory.length} workloads optimized`, tone: "green" },
   ];
 
   const approveRecommendedWindow = () => {
@@ -146,7 +136,6 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const immediateCo2Kg = Number(((immediateIntensity * energyKwh * runtimeHours) / 1000).toFixed(3));
     const optimalCo2Kg = Number(((expectedIntensity * energyKwh * runtimeHours) / 1000).toFixed(3));
     const co2SavedKg = Number(Math.max(0, immediateCo2Kg - optimalCo2Kg).toFixed(3));
-
     onApproveRecommended({
       name: `Recommended window - ${getZoneDisplayName(zone)}`,
       zone,
@@ -155,17 +144,13 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
       priorityHours: recommendedWindow.start,
       runtimeHours,
       recommendedDelayHours: recommendedWindow.start,
-      expectedIntensity,
-      immediateIntensity,
-      co2SavedKg
+      expectedIntensity, immediateIntensity, co2SavedKg,
     });
   };
 
   return (
     <div className="page-section">
-      <div className="dashboard-topline">
-        <h1>Dashboard</h1>
-      </div>
+      <div className="dashboard-topline"><h1>Dashboard</h1></div>
 
       <section className="hero-banner">
         <div className="hero-banner-main">
@@ -186,7 +171,6 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
               </article>
             </div>
           </div>
-
           <div className="hero-best-window">
             <div className="hero-best-window-label">Recommended green window</div>
             <div className="hero-best-window-time">{recommendedWindow.label}</div>
@@ -201,10 +185,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
         {cards.map((card) => (
           <article key={card.label} className={`stat-card tone-${card.tone}`}>
             <div className="stat-label">{card.label}</div>
-            <div className="stat-value-row">
-              <strong>{card.value}</strong>
-              <span>{card.unit}</span>
-            </div>
+            <div className="stat-value-row"><strong>{card.value}</strong><span>{card.unit}</span></div>
             <div className="stat-note">{card.note}</div>
           </article>
         ))}
@@ -228,7 +209,6 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
               Green shading marks lower-carbon windows. Placement markers show the suggested run interval.
             </span>
           </div>
-
           <div className="forecast-now">
             <strong>{current}</strong>
             <span>gCO2/kWh now</span>
