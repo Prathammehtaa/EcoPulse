@@ -3,11 +3,11 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
 
-COPY . .
-RUN npm run build
+COPY frontend/ .
+RUN npx vite build
 
 # Stage 2 — Serve
 FROM nginx:alpine
