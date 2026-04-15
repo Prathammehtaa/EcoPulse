@@ -1,13 +1,13 @@
 # Stage 1 — Build
-FROM node:20-slim AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 COPY . .
-RUN npx vite build
+RUN ./node_modules/.bin/vite build
 
 # Stage 2 — Serve
 FROM nginx:alpine
