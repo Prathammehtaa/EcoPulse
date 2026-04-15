@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import SimpleChart from "../components/SimpleChart";
-import { forecast24h, regions } from "../mockData";
+import { forecast24h, getZoneDisplayName, regions } from "../mockData";
 
 function toneForValue(value) {
   if (value < 160) return "green";
@@ -33,10 +33,11 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     return {
       start,
       end,
-      label: `Tonight ${formatHour(start)} - ${formatHour(end)}`
+      label: `${formatHour(start)} - ${formatHour(end)}`
     };
   }, [lowWindowIndex]);
 
+  const activeRegionName = getZoneDisplayName(zone);
   const recommendedStart = useMemo(() => {
     const next = new Date();
     next.setMinutes(0, 0, 0);
@@ -51,6 +52,31 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     }
     return points;
   }, [recommendedWindow]);
+  const workloadWindows = useMemo(() => {
+    const now = new Date();
+    const horizonEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    return workloadHistory
+      .filter((item) => item.zone === zone && item.recommendedStart && item.runtimeHours)
+      .map((item) => {
+        const start = new Date(item.recommendedStart);
+        const end = new Date(start.getTime() + Number(item.runtimeHours || 0) * 60 * 60 * 1000);
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= now || start >= horizonEnd) {
+          return null;
+        }
+
+        const startIndex = Math.max(0, (start.getTime() - now.getTime()) / (60 * 60 * 1000));
+        const endIndex = Math.min(24, (end.getTime() - now.getTime()) / (60 * 60 * 1000));
+
+        return {
+          startIndex,
+          endIndex,
+          label: `${item.name} (${item.runtimeHours}h)`
+        };
+      })
+      .filter(Boolean);
+  }, [workloadHistory, zone]);
 
   const regionCards = [
     { zone: "US-MIDA-PJM", note: "Medium - consider deferring" },
@@ -58,7 +84,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
   ].map((item) => {
     const region = regions.find((entry) => entry.zone === item.zone);
     return {
-      label: item.zone,
+      label: getZoneDisplayName(item.zone),
       value: `${region.intensity}`,
       unit: "gCO2/kWh",
       note: item.note,
@@ -122,7 +148,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
     const co2SavedKg = Number(Math.max(0, immediateCo2Kg - optimalCo2Kg).toFixed(3));
 
     onApproveRecommended({
-      name: `Recommended window - ${zone}`,
+      name: `Recommended window - ${getZoneDisplayName(zone)}`,
       zone,
       recommendedStart,
       energyKwh,
@@ -144,18 +170,19 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
       <section className="hero-banner">
         <div className="hero-banner-main">
           <div className="hero-banner-copy">
-            <h2>Good afternoon, {username}</h2>
-            <p>Grid carbon is lower in {zone}. This is a strong window to run flexible workloads.</p>
-            <div className="hero-insight-grid">
+            <span className="hero-kicker">Live carbon overview</span>
+            <div className="hero-copy-topline">
+              <div className="hero-copy-intro">
+                <h2>Hello{username ? `, ${username}` : ""}!</h2>
+                <p>
+                  {activeRegionName} is showing a cleaner operating window right now. Review the recommendation below
+                  to place flexible work at a lower-carbon time.
+                </p>
+              </div>
               <article className="hero-insight-card">
                 <span>Best live region</span>
-                <strong>{bestRegion.zone}</strong>
+                <strong>{getZoneDisplayName(bestRegion.zone)}</strong>
                 <small>{bestRegion.intensity} gCO2/kWh right now</small>
-              </article>
-              <article className="hero-insight-card">
-                <span>Carbon-aware action</span>
-                <strong>Shift flexible jobs tonight</strong>
-                <small>Use cleaner windows to reduce emissions without changing workload size.</small>
               </article>
             </div>
           </div>
@@ -163,21 +190,6 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
           <div className="hero-best-window">
             <div className="hero-best-window-label">Recommended green window</div>
             <div className="hero-best-window-time">{recommendedWindow.label}</div>
-            <div className="hero-best-window-note">
-              Low-carbon interval identified by the model. Reserve this space for the final model explanation,
-              delay reasoning, and workload placement summary from your backend.
-            </div>
-            <div className="hero-best-window-meta">
-              <span>
-                CO2 saved <strong>24.8 kg</strong>
-              </span>
-              <span>
-                Delay <strong>{averageDelay}h</strong>
-              </span>
-              <span>
-                SLA risk <strong>None</strong>
-              </span>
-            </div>
             <div className="hero-best-window-actions">
               <button className="primary-action inline" onClick={approveRecommendedWindow}>Schedule Workload</button>
             </div>
@@ -201,19 +213,19 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
       <section className="forecast-panel">
         <div className="forecast-panel-header">
           <div>
-            <h3>24-hour carbon intensity forecast - {zone}</h3>
+            <h3>24-hour carbon intensity forecast - {getZoneDisplayName(zone)}</h3>
             <div className="forecast-panel-controls">
               <p>Updated 4 min ago</p>
               <select value={zone} onChange={(event) => setZone(event.target.value)} className="forecast-select">
                 {regions.map((item) => (
                   <option key={item.zone} value={item.zone}>
-                    {item.zone}
+                    {item.name}
                   </option>
                 ))}
               </select>
             </div>
             <span className="forecast-tag">
-              Green shading marks low-carbon windows | Red shading marks high-carbon windows | Placement markers show suggested run slots
+              Green shading marks lower-carbon windows. Placement markers show the suggested run interval.
             </span>
           </div>
 
@@ -223,7 +235,7 @@ export default function DashboardPage({ username, workloadHistory, onNavigate, o
           </div>
         </div>
 
-        <SimpleChart values={forecast} placementIndexes={placementIndexes} />
+        <SimpleChart values={forecast} placementIndexes={placementIndexes} workloadWindows={workloadWindows} />
 
         <div className="forecast-summary">
           Lowest 24h intensity: <strong>{lowWindow} gCO2/kWh</strong>

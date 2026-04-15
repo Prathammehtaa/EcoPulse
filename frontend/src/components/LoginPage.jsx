@@ -22,20 +22,19 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div className="login-shell">
-      <section className="login-hero">
-        <div className="login-hero-logo">
-          <LogoMark className="eco-logo large" />
-        </div>
-        <h1>
-          <h1><span style={{color: "#4fc988"}}>Eco</span><span style={{color: "white"}}>Pulse</span></h1>
-        </h1>
-        <p>
-          Intelligent carbon-aware orchestration with human in the loop decisions for greener,
-          operationally safer data centers.
-        </p>
-      </section>
-
       <form className="login-form" onSubmit={submit}>
+        <div className="login-brand">
+          <div className="login-brand-badge">
+            <LogoMark className="eco-logo login-logo" />
+          </div>
+          <div className="login-brand-copy">
+            <p className="login-brand-kicker">Carbon-aware operations</p>
+            <h1 className="login-brand-title">
+              <span>Eco</span>Pulse
+            </h1>
+          </div>
+        </div>
+
         <div className="login-copy">
           <h2>Sign in</h2>
           <p>Access your carbon decision support dashboard</p>
@@ -59,28 +58,34 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <div className="login-fields">
-          <input
-            type="email"
-            placeholder=""
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <div className="password-field">
+          <label className="login-field-group">
+            <span>User address</span>
             <input
-              type={showPassword ? "text" : "password"}
+              type="email"
               placeholder=""
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword((current) => !current)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? "🙈" : "👁"}
-            </button>
-          </div>
+          </label>
+          <label className="login-field-group">
+            <span>Password</span>
+            <div className="password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder=""
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </label>
         </div>
         {error ? <div className="form-error">{error}</div> : null}
         <button className="primary-action" type="submit">

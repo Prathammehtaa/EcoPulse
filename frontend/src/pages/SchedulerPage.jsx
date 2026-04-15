@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { forecast24h, regions } from "../mockData";
+import { forecast24h, getZoneDisplayName, regions } from "../mockData";
 
 function buildRecommendation(zone, energyKwh, runtimeHours, priorityHours, horizon) {
   const values = forecast24h[zone];
@@ -103,7 +103,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
-                  {region.zone}
+                  {region.name}
                 </option>
               ))}
             </select>
@@ -151,7 +151,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
             <select value={zone} onChange={(event) => setZone(event.target.value)}>
               {regions.map((region) => (
                 <option key={region.zone} value={region.zone}>
-                  {region.zone}
+                  {region.name}
                 </option>
               ))}
             </select>
@@ -252,7 +252,7 @@ export default function SchedulerPage({ workloadHistory, setWorkloadHistory }) {
               {workloadHistory.map((item, index) => (
                 <tr key={`${item.name}-${index}`}>
                   <td>{item.name}</td>
-                  <td>{item.zone}</td>
+                  <td>{getZoneDisplayName(item.zone)}</td>
                   <td>{item.recommendedStart ?? "-"}</td>
                   <td>{item.energyKwh} kWh</td>
                   <td>{item.priorityHours ?? 0}h</td>
