@@ -209,8 +209,10 @@ marimo/_lsp/
 __marimo__/
 .idea/
 ecopulse-project-97ca8734391b.json
+node_modules/
 frontend-react/node_modules/
 frontend-react/dist/
+/package-lock.json
  
  
 .cfg
