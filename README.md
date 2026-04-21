@@ -1,399 +1,293 @@
 # EcoPulse
 
-**Carbon-Responsible Data Center Scheduling Using Grid Emissions Forecasting**
+**Carbon-Aware Workload Scheduling Platform for Data Centers**
 
-EcoPulse is an MLOps project for carbon-aware scheduling of time-flexible data center workloads. The system combines hourly grid-emissions signals with weather data, builds forecasting features, and supports low-carbon execution-window recommendations for operational decision-making.
-
----
-
-## Project Overview
-
-Data centers consume a meaningful share of global electricity, but many scheduling systems still ignore how grid carbon intensity changes over time. EcoPulse addresses this by forecasting short-term carbon intensity and identifying lower-carbon execution windows so flexible workloads can be delayed or shifted with minimal operational disruption.
-
-This project currently focuses on:
-- ingesting hourly grid/carbon data
-- ingesting hourly weather data
-- preprocessing and aligning both sources in UTC
-- merging datasets and creating model-ready features
-- validating processed data with schema checks
-- orchestrating the pipeline with Apache Airflow in Docker
-- storing raw and processed data in Google Cloud Storage
-- supporting alerting through Slack and email
+EcoPulse is a full-stack MLOps project that forecasts electricity grid carbon intensity and recommends optimal low-carbon execution windows for flexible data center workloads. The system combines real-time grid emissions data with weather signals, trains XGBoost forecasting models, and serves recommendations through a FastAPI backend and a React frontend dashboard — keeping human operators in the loop for all scheduling decisions.
 
 ---
 
-## Current Tech Stack
+## Team Contributions
 
-- **Orchestration:** Apache Airflow 3 (Dockerized)
-- **Execution model:** CeleryExecutor with Redis + Postgres
-- **Language:** Python 3.11+
-- **Storage:** Google Cloud Storage (GCS)
-- **Data format:** JSON, CSV, Parquet
-- **Validation:** TensorFlow Data Validation (TFDV) / schema validation utilities
-- **Monitoring & alerts:** Slack webhook, Gmail SMTP email notifications
-- **Containerization:** Docker + Docker Compose
-
----
-
-## Data Sources
-
-- **Electricity Maps** for grid/carbon-intensity and energy signals
-- **Open-Meteo** for weather history and related meteorological signals
-- **NOAA** as an additional public weather source referenced in project scoping
+| Role | Responsibility |
+|------|---------------|
+| Data Pipeline | Grid and weather ingestion, preprocessing, schema validation, Airflow orchestration |
+| Model Pipeline | XGBoost training, hyperparameter tuning, validation, SHAP explainability |
+| Bias Detection & Mitigation | Fairness analysis, bias reports, mitigated model variants |
+| Inference & API | FastAPI backend, WorkloadScheduler, CarbonPredictor inference pipeline |
+| Frontend | React dashboard, workload scheduler UI, landing page |
+| Deployment | Docker, Kubernetes, IaC, CI/CD, GCP deployment |
 
 ---
 
-## Current Repository Structure
+## What EcoPulse Does
+
+Every hour, electricity grids get cleaner or dirtier depending on how much wind, solar, and hydropower is available versus coal and gas. EcoPulse watches those shifts and tells data center operators exactly when to run their flexible compute jobs — same deadline, less carbon.
+
+**Core flow:**
+1. Ingest hourly grid carbon signals and weather data
+2. Preprocess, validate, and merge into model-ready features
+3. Forecast carbon intensity 1h, 12h, and 24h ahead using XGBoost
+4. Detect the lowest-carbon window within an operator's priority window
+5. Present the recommendation to the operator via the dashboard
+6. Operator approves or denies — human always decides
+
+---
+
+## Repository Structure
 
 ```text
 EcoPulse/
-├── Data_Pipeline/
-│   ├── dags/
+├── api/                          # FastAPI backend
+│   ├── main.py                   # All endpoints — /predict, /forecast, /regions, /metrics etc.
+│   └── __init__.py
+├── Data_Pipeline/                # Data ingestion and preprocessing
+│   ├── dags/                     # Airflow DAGs
 │   │   ├── hourly_ingestion.py
-│   │   ├── backfill_ingestion.py
-│   │   ├── daily_pipeline.py              # add/update as daily DAG is finalized
-│   │   └── ...
-│   ├── src/
+│   │   └── backfill_ingestion.py
+│   ├── src/                      # Pipeline source code
 │   │   ├── signals_historical_ingestion.py
-│   │   ├── daily_grid_ingestion.py        # optional, if used later
-│   │   ├── daily_weather_ingestion.py     # optional, if used later
-│   │   ├── weather_ingestion.py
-│   │   ├── preprocessing_*.py
-│   │   ├── feature_engineering.py
+│   │   ├── weather_historical_ingestion.py
+│   │   ├── grid_preprocessing.py
+│   │   ├── weather_preprocessing.py
 │   │   ├── merge_and_features.py
-│   │   ├── schema_validation_task.py
-│   │   ├── schema_validation_module.py
+│   │   ├── schema_validation.py
+│   │   ├── bias_mitigation.py
+│   │   ├── alerts.py
 │   │   └── ...
-│   ├── config/
-│   │   ├── airflow.cfg
-│   │   ├── *.yaml
-│   │   ├── *.yml
-│   │   └── *.json
-│   ├── data/
-│   │   ├── raw/
-│   │   ├── processed/
-│   │   └── features/
-│   ├── logs/
-├── docker-compose.yaml
-├── Dockerfile
+│   ├── data/processed/           # Processed parquet files (DVC tracked)
+│   ├── pipeline_config/          # YAML configs for ingestion and preprocessing
+│   └── docs/
+│       └── BIAS_MITIGATION_REPORT.md
+├── Model_Pipeline/               # ML training and validation
+│   ├── src/
+│   │   ├── train_xgboost.py
+│   │   ├── hyperparameter_tuning.py
+│   │   ├── model_validation.py
+│   │   ├── bias_detection.py
+│   │   ├── drift_detection.py
+│   │   ├── inference/
+│   │   │   ├── predict.py        # CarbonPredictor
+│   │   │   ├── feature_builder.py
+│   │   │   └── green_window.py   # WorkloadScheduler, GreenWindowDetector
+│   │   └── ...
+│   ├── models/                   # Trained joblib model files
+│   │   ├── xgboost_tuned_1h.joblib
+│   │   ├── xgboost_tuned_12h.joblib
+│   │   └── xgboost_tuned_24h.joblib
+│   └── reports/validation/       # Confusion matrices, SHAP plots, sensitivity reports
+├── frontend/                     # React + Vite frontend
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── LandingPage.jsx
+│   │   │   ├── DashboardPage.jsx
+│   │   │   ├── SchedulerPage.jsx
+│   │   │   ├── AdminPages.jsx
+│   │   │   └── AlertsPage.jsx
+│   │   ├── components/
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── LogoMark.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   └── SimpleChart.jsx
+│   │   ├── api.js                # API client calling FastAPI
+│   │   ├── App.jsx               # App router
+│   │   └── styles.css
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+├── IaC/                          # Infrastructure as Code
+├── k8s/                          # Kubernetes manifests
+├── monitoring/                   # Monitoring configuration
+├── .github/workflows/            # CI/CD GitHub Actions
+│   ├── tests.yml
+│   └── model_training.yml
+├── docker-compose.yaml           # Full stack Docker Compose
+├── Dockerfile                    # Root Dockerfile
 ├── requirements.txt
-├── .env
-├── .gitignore
-└── README.md
-```
-
-> Update the filenames above if your local repo uses slightly different names. The structure reflects the project as currently discussed and implemented.
-
----
-
-## Pipeline Flow
-
-### 1. Hourly ingestion
-The hourly pipeline fetches:
-- grid/carbon signals
-- weather signals
-
-### 2. Preprocessing
-The raw feeds are cleaned and standardized:
-- timestamps normalized to UTC
-- schema / field cleanup
-- region and zone validation
-- missing-value handling
-
-### 3. Merge + feature engineering
-Processed grid and weather datasets are aligned on hourly timestamps and region, then transformed into model-ready features.
-
-### 4. Schema validation
-The merged feature dataset is validated before downstream model training or inference use.
-
-### 5. Notifications
-Pipeline success/failure notifications are sent through Slack and email.
-
----
-
-## Expected Data Layout
-
-### In GCS bucket
-```text
-gs://ecopulse/
-├── raw/
-│   ├── grid_signals/
-│   └── weather/
-├── processed/
-└── features/
-```
-
-### Local project data folders
-```text
-Data_Pipeline/data/
-├── raw/
-├── processed/
-└── features/
+└── streamlit_app.py              # Streamlit evaluation viewer
 ```
 
 ---
 
-## Prerequisites
+## Tech Stack
 
-Before deployment, make sure the following are installed and configured:
+| Layer | Technology |
+|-------|-----------|
+| Data Ingestion | Python, Electricity Maps API, Open-Meteo API |
+| Orchestration | Apache Airflow 3 (Dockerized, CeleryExecutor) |
+| Data Storage | Google Cloud Storage (GCS), Parquet, DVC |
+| Data Validation | TensorFlow Data Validation (TFDV) |
+| ML Training | XGBoost, LightGBM, scikit-learn |
+| Experiment Tracking | MLflow |
+| Explainability | SHAP, LIME |
+| Inference API | FastAPI, Uvicorn |
+| Frontend | React, Vite |
+| Containerization | Docker, Docker Compose |
+| Orchestration | Kubernetes |
+| CI/CD | GitHub Actions |
+| Cloud | Google Cloud Platform (GCP) |
+| Alerts | Slack webhook, Gmail SMTP |
 
-- Docker Desktop
-- Docker Compose
+---
+
+## Grid Zones Covered
+
+| Zone ID | Region | Characteristics |
+|---------|--------|----------------|
+| US-MIDA-PJM | Northern Virginia Region | Mid-Atlantic grid, heavy coal/gas mix, higher carbon intensity |
+| US-NW-PACW | Portland Oregon Region | Pacific Northwest, dominated by hydropower, lower carbon intensity |
+
+---
+
+## Machine Learning Models
+
+EcoPulse uses tuned XGBoost models trained on 100 engineered features combining grid signals and weather data:
+
+| Model | Forecast Horizon | File |
+|-------|-----------------|------|
+| XGBoost Tuned | 1 hour ahead | `xgboost_tuned_1h.joblib` |
+| XGBoost Tuned | 12 hours ahead | `xgboost_tuned_12h.joblib` |
+| XGBoost Tuned | 24 hours ahead | `xgboost_tuned_24h.joblib` |
+
+Mitigated variants are also available for bias-corrected inference.
+
+---
+
+## FastAPI Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Model load status |
+| GET | `/regions` | Live carbon intensity for all zones |
+| GET | `/forecast/{zone}` | 24-hour carbon intensity forecast array |
+| POST | `/predict` | WorkloadScheduler recommendation with CO2 savings |
+| GET | `/metrics` | Model performance metrics |
+| GET | `/drift` | Drift detection report |
+| GET | `/shap` | SHAP feature importance |
+| GET | `/alerts` | System alerts |
+| GET | `/logs` | API logs |
+| GET | `/users` | User list |
+| POST | `/retrain` | Trigger model retraining |
+
+**Example /predict request:**
+```json
+{
+  "zone": "US-MIDA-PJM",
+  "energy_kwh": 120,
+  "runtime_hours": 4,
+  "horizon": 12,
+  "priority_hours": 6
+}
+```
+
+**Example /predict response:**
+```json
+{
+  "recommended_start": "2026-04-14 06:00:00",
+  "hours_to_wait": 2,
+  "expected_intensity_gco2_kwh": 359.2,
+  "immediate_intensity_gco2_kwh": 377.15,
+  "co2_saved_kg": 2.154,
+  "co2_savings_pct": 4.8,
+  "recommendation": "Wait 2 hours — start at 06:00. Save 2.2 kg CO2 (4.8% reduction)."
+}
+```
+
+---
+
+## Running Locally
+
+### Prerequisites
 - Python 3.11+
-- A GCP service account with access to the `ecopulse` bucket
-- Electricity Maps API key
-- Internet access for external APIs
+- Node.js 20+
+- Docker Desktop
 
-You should also have:
-- a Slack webhook URL for alerts
-- Gmail SMTP credentials or an app password for email notifications
-
----
-
-## Environment Variables
-
-Create a `.env` file in the project root.
-
-Example:
-
-```env
-AIRFLOW_PROJ_DIR=.
-AIRFLOW_UID=50000
-
-GCP_PROJECT_ID=your-gcp-project-id
-GCS_BUCKET=ecopulse
-GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/config/gcp-service-account.json
-
-ELECTRICITY_MAPS_API_KEY=your_electricity_maps_key
-OPEN_METEO_BASE_URL=https://archive-api.open-meteo.com/v1/archive
-
-SLACK_WEBHOOK_URL=your_slack_webhook
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-SMTP_MAIL_FROM=your_email@gmail.com
-```
-
----
-
-## Docker Volume Mounts
-
-A working Docker Compose setup should mount the Airflow folders like this:
-
-```yaml
-volumes:
-  - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/dags:/opt/airflow/dags
-  - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/logs:/opt/airflow/logs
-  - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/config:/opt/airflow/config
-  - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/src:/opt/airflow/src
-  - ${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/data:/opt/airflow/data
-```
-
-This ensures Airflow can access DAGs, logs, config, source code, and data paths correctly inside the containers.
-
----
-
-## Deployment Steps
-
-### Step 1: Clone the repository
+### 1. Clone the repository
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Prathammehtaa/EcoPulse.git
 cd EcoPulse
 ```
 
-### Step 2: Create required local folders
+### 2. Install Python dependencies
 ```bash
-mkdir -p Data_Pipeline/dags
-mkdir -p Data_Pipeline/logs
-mkdir -p Data_Pipeline/config
-mkdir -p Data_Pipeline/src
-mkdir -p Data_Pipeline/data/raw
-mkdir -p Data_Pipeline/data/processed
+pip install -r requirements.txt
 ```
 
-On Windows PowerShell, create them manually if needed.
-
-### Step 3: Add credentials
-Place your GCP service account JSON inside the config folder, for example:
-
-```text
-Data_Pipeline/config/gcp-service-account.json
-```
-
-Make sure the path matches `GOOGLE_APPLICATION_CREDENTIALS` in `.env`.
-
-### Step 4: Build Airflow image
+### 3. Start the FastAPI backend
 ```bash
-docker compose build
+uvicorn api.main:app --reload --port 8000
 ```
 
-If you install Python dependencies through the Dockerfile, rebuild after every dependency change.
+FastAPI will load the XGBoost models and test data automatically. Visit `http://localhost:8000/docs` for the Swagger UI.
 
-### Step 5: Initialize Airflow
+### 4. Start the React frontend
 ```bash
-docker compose up airflow-init
+cd frontend
+npm install
+npm run dev
 ```
 
-This initializes the Airflow metadata database and creates required directories.
+Open `http://localhost:5173` in your browser.
 
-### Step 6: Start all services
+### 5. Login credentials
+- **Username:** any email address
+- **Password:** `ecopulse`
+- **Admin access:** select Admin role with the same password
+
+---
+
+## Running the Full Stack with Docker
+
 ```bash
 docker compose up -d
 ```
 
-Typical services:
-- airflow-webserver
-- airflow-scheduler
-- airflow-worker
-- airflow-triggerer
-- postgres
-- redis
+Services started:
+- FastAPI backend
+- React frontend (served via Nginx)
+- Airflow webserver, scheduler, worker
+- Postgres, Redis
 
-### Step 7: Open Airflow UI
-Open:
+---
 
-```text
-http://localhost:8080
+## Data Pipeline Setup
+
+### Environment Variables
+Create a `.env` file in the project root:
+
+```env
+AIRFLOW_UID=50000
+GCP_PROJECT_ID=your-gcp-project-id
+GCS_BUCKET=ecopulse
+GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/config/gcp-service-account.json
+ELECTRICITY_MAPS_API_KEY=your_key
+OPEN_METEO_BASE_URL=https://archive-api.open-meteo.com/v1/archive
+SLACK_WEBHOOK_URL=your_slack_webhook
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
 ```
 
-Log in using the credentials configured in your Compose setup.
-
-### Step 8: Verify DAGs are loaded
-Confirm your DAGs appear in the Airflow UI, such as:
-- `hourly_ingestion`
-- `backfill_ingestion`
-- `daily_pipeline` (if added)
-
-### Step 9: Trigger the pipeline
-You can run DAGs from the Airflow UI or CLI.
-
-Example CLI:
+### Initialize Airflow
 ```bash
-docker compose exec airflow-scheduler airflow dags list
-docker compose exec airflow-scheduler airflow dags trigger hourly_ingestion
+docker compose up airflow-init
+docker compose up -d
 ```
 
-### Step 10: Validate outputs
-Check:
-- raw data written to GCS
-- processed/merged outputs created
-- feature tables generated
-- schema validation completed
-- Slack/email notifications delivered
+Open Airflow UI at `http://localhost:8080` and trigger the `hourly_ingestion` DAG.
 
 ---
 
-## Running the Main Pipelines
+## CI/CD
 
-### Hourly DAG
-Use this for recurring ingestion and feature generation from live/hourly feeds.
+GitHub Actions workflows run automatically on push to main:
 
-**Typical flow:**
-```text
-start
-  ├── grid_pipeline
-  ├── weather_pipeline
-  └── join_before_merge
-        ↓
-   merge_and_features
-        ↓
- schema_validation_tfdv
-        ↓
-   slack_success
-        ↓
- notify_success_email
-        ↓
-       end
-```
-
-### Backfill DAG
-Use this to collect historical data over a defined time range for training and evaluation.
-
-### Daily DAG
-Use this for daily aggregation or daily model-ready outputs once the daily workflow is finalized. Since your current setup uses data populated by the hourly ingestion, the daily DAG should consume already-ingested hourly data rather than re-pulling from scratch.
+- **tests.yml** — runs unit tests for data pipeline, model pipeline, and bias mitigation
+- **model_training.yml** — triggers model retraining pipeline
 
 ---
 
-## Recommended Deployment Order
-
-1. Set up Docker, `.env`, and credentials
-2. Confirm GCS access works
-3. Run Airflow init
-4. Start the full stack
-5. Test one ingestion task manually
-6. Test hourly DAG end to end
-7. Test Slack/email alerts
-8. Run historical backfill
-9. Enable scheduled DAG execution
-
----
-
-## Common Issues
-
-### 1. Airflow cannot see dags/logs/config
-Cause: incorrect Docker volume mount path.
-
-Fix: ensure the left-hand side includes the missing `/`:
-
-```yaml
-${AIRFLOW_PROJ_DIR:-.}/Data_Pipeline/dags:/opt/airflow/dags
-```
-
-not
-
-```yaml
-${AIRFLOW_PROJ_DIR:-.}Data_Pipeline/dags:/opt/airflow/dags
-```
-
-### 2. SMTP SSL wrong version number
-Cause: mismatch between SSL and TLS settings.
-
-Fix:
-- use `smtp.gmail.com`
-- use port `587` with STARTTLS, or port `465` with SSL
-- do not mix both modes
-
-### 3. Airflow imports fail
-Cause: files in `src/` are not mounted or not on the Python path.
-
-Fix:
-- mount `Data_Pipeline/src:/opt/airflow/src`
-- add the source directory to the container path if needed
-
-### 4. GCS authentication issues
-Cause: credentials file missing inside container or invalid permissions.
-
-Fix:
-- confirm JSON file exists inside `/opt/airflow/config/`
-- confirm bucket permissions for the service account
-
-### 5. Docker creates unexpected folders
-Cause: bind-mount target exists in Compose but local source path is missing or misspelled.
-
-Fix:
-- create the local directories first
-- recheck path names carefully
-
----
-
-## Future Extensions
-
-Planned or possible next additions:
-- model training pipeline
-- MLflow experiment tracking and registry
-- drift detection with Evidently
-- FastAPI inference service
-- daily recommendation generation
-- conservative fallback policy for missing data or drift
-- workload simulator / synthetic workload generation for scheduling evaluation
-
----
-
-## Project Goal
-
-EcoPulse is designed as an augmentation system, not a fully autonomous controller. It recommends low-carbon scheduling windows while allowing operators to retain control over final execution decisions.
+## Frontend App Flow
 
 ---
 
