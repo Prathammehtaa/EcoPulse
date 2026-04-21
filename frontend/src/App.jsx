@@ -4,7 +4,7 @@ import Sidebar from "./components/Sidebar";
 import DashboardPage from "./pages/DashboardPage";
 import SchedulerPage from "./pages/SchedulerPage";
 import AlertsPage from "./pages/AlertsPage";
-import LandingPage from "./pages/LandingPage";
+import LandingPage from "./pages/LandingPage"; 
 
 import {
   ApiPage,

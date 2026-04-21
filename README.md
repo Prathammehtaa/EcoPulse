@@ -290,5 +290,34 @@ GitHub Actions workflows run automatically on push to main:
 ## Frontend App Flow
 
 ---
+- **Landing Page** — project overview, how it works, impact stats, grid zones
+- **Login** — role selection (Operator or Admin), email + password
+- **Dashboard** — live carbon intensity for both regions, 24h forecast chart with auto-refresh every 60 seconds, recommended green window, forecast cards
+- **Workload Scheduler** — what-if simulator with live API calls, schedule new workloads, approve or deny recommendations, view scheduled workload history
+- **Admin Pages** — metrics, SHAP explainability, drift detection, API status, users, logs
+
+---
+
+## Bias Mitigation
+
+EcoPulse includes a full bias detection and mitigation pipeline. The system checks for disparate model performance across grid zones and time periods, generates bias reports, and provides mitigated model variants using reweighting techniques. See `Data_Pipeline/docs/BIAS_MITIGATION_REPORT.md` for details.
+
+---
+
+## Common Issues
+
+| Issue | Fix |
+|-------|-----|
+| `vite: Permission denied` in Docker | Use `node:20` not `node:20-slim`, run `npm install` inside container |
+| Models not loading | Check `Model_Pipeline/models/` has `xgboost_tuned_*.joblib` files |
+| API returns 404 on `/` | Normal — FastAPI has no root route, use `/docs` or `/health` |
+| node_modules blocking git checkout | Close all terminals, delete node_modules, then switch branches |
+| Frontend shows `—` for intensity | FastAPI is not running — start uvicorn first |
+
+---
+
+## Project Goal
+
+EcoPulse is designed as an augmentation system, not a fully autonomous controller. It recommends low-carbon scheduling windows while keeping human operators in control of all final execution decisions — making data centers greener without compromising operational reliability.
 
 
