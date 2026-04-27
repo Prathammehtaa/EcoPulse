@@ -29,7 +29,7 @@ spec:
             - containerPort: 8000
           env:
             - name: GCS_BUCKET
-              value: "ecopulse-lakehouse"
+              value: "ecopulse-lakehouse-pratham"
             - name: MODELS_GCS_PREFIX
               value: "models"
             - name: DATA_GCS_PREFIX

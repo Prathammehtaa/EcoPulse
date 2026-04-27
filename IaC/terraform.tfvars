@@ -1,7 +1,7 @@
 project_id             = "ecopulse-mlops-pratham"
 region                 = "us-central1"
 zone                   = "us-central1-a"
-bucket_name            = "ecopulse-lakehouse"
+bucket_name            = "ecopulse-lakehouse-pratham"
 artifact_registry_repo = "ecopulse-images"
 cluster_name           = "ecopulse-gke"
 node_pool_name         = "ecopulse-node-pool"
