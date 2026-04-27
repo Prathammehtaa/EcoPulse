@@ -181,3 +181,13 @@ resource "google_container_node_pool" "primary_nodes" {
     }
   }
 }
+
+# -------------------------------------------------
+# Static external IP for frontend LoadBalancer
+# -------------------------------------------------
+resource "google_compute_address" "frontend_ip" {
+  name   = "ecopulse-frontend-ip"
+  region = var.region
+
+  depends_on = [google_project_service.required]
+}

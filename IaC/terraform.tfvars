@@ -1,4 +1,4 @@
-project_id             = "ecopulse-492814"
+project_id             = "ecopulse-mlops-pratham"
 region                 = "us-central1"
 zone                   = "us-central1-a"
 bucket_name            = "ecopulse-lakehouse"

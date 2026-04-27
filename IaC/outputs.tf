@@ -25,3 +25,8 @@ output "github_actions_service_account_email" {
 output "backend_service_account_email" {
   value = google_service_account.backend_sa.email
 }
+
+output "frontend_static_ip" {
+  value       = google_compute_address.frontend_ip.address
+  description = "Static external IP for the frontend LoadBalancer — use as loadBalancerIP in k8s/frontend.yaml"
+}

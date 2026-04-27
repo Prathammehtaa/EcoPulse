@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "ecopulse-tf-state"
+    bucket = "ecopulse-mlops-pratham-tf-state"
     prefix = "terraform/state"
   }
 }

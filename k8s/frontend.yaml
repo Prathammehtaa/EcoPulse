@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: us-central1-docker.pkg.dev/ecopulse-492814/ecopulse-images/frontend:latest
+          image: us-central1-docker.pkg.dev/ecopulse-mlops-pratham/ecopulse-images/frontend:latest
           ports:
             - containerPort: 80
           resources:
@@ -47,6 +47,8 @@ kind: Service
 metadata:
   name: frontend-service
   namespace: ecopulse
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
 spec:
   selector:
     app: frontend

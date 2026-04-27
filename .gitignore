@@ -228,3 +228,4 @@ Model_Pipeline/mlruns/
 Model_Pipeline/reports/bias/
 Model_Pipeline/reports/*.csv
 Model_Pipeline/reports/*.png
+ecopulse-infra-key.json

@@ -9,10 +9,10 @@ on:
       - "Model_Pipeline/src/**"
 
 env:
-  PROJECT_ID: ecopulse-492814
+  PROJECT_ID: ecopulse-mlops-pratham
   REGION: us-central1
   CLUSTER: ecopulse-gke
-  IMAGE: us-central1-docker.pkg.dev/ecopulse-492814/ecopulse-images/backend
+  IMAGE: us-central1-docker.pkg.dev/ecopulse-mlops-pratham/ecopulse-images/backend
 
 jobs:
   deploy:

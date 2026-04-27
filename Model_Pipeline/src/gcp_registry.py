@@ -1002,12 +1002,12 @@ def make_version_string(model_type: str, horizon: int) -> str:
 
     Format::
 
-        {YYYYMMDD}_{HHMM}_{model_type}_{horizon}h
+        {YYYYMMDD}-{HHMM}-{model_type}-{horizon}h
 
     Examples::
 
-        make_version_string("xgboost", 1)        # "20240315_1423_xgboost_1h"
-        make_version_string("xgboost_tuned", 24) # "20240315_1423_xgboost_tuned_24h"
+        make_version_string("xgboost", 1)        # "20240315-1423-xgboost-1h"
+        make_version_string("xgboost_tuned", 24) # "20240315-1423-xgboost-tuned-24h"
 
     Args:
         model_type: Model flavour string (e.g. ``"xgboost"``, ``"lightgbm"``).
@@ -1016,8 +1016,8 @@ def make_version_string(model_type: str, horizon: int) -> str:
     Returns:
         Version string suitable for :func:`push_model_to_registry`.
     """
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M")
-    return f"{ts}_{model_type}_{horizon}h"
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M")
+    return f"{ts}-{model_type.replace('_', '-')}-{horizon}h"
 
 
 def _get_git_commit() -> str:
