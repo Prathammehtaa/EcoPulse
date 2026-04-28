@@ -28,12 +28,14 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: GCS_BUCKET
-              value: "ecopulse-lakehouse-pratham"
-            - name: MODELS_GCS_PREFIX
-              value: "models"
-            - name: DATA_GCS_PREFIX
-              value: "processed"
+            - name: REGISTRY_PROJECT
+              value: "ecopulse-mlops-pratham"
+            - name: MODELS_REPO
+              value: "ecopulse-models-generic"
+            - name: DATA_BUCKET
+              value: "ecopulse-pratham-data"
+            - name: DATA_BLOB
+              value: "processed/test_split.parquet"
           resources:
             requests:
               cpu: "500m"
