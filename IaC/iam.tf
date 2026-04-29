@@ -35,6 +35,22 @@ resource "google_storage_bucket_iam_member" "backend_bucket_access" {
   member = "serviceAccount:${google_service_account.backend_sa.email}"
 }
 
+resource "google_project_iam_member" "backend_sa_registry_reader" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.backend_sa.email}"
+}
+
+# -------------------------------------------------
+# Backend SA read access to the data bucket
+# (ecopulse-pratham-data is not Terraform-managed, referenced by name)
+# -------------------------------------------------
+resource "google_storage_bucket_iam_member" "backend_data_bucket_reader" {
+  bucket = "ecopulse-pratham-data"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.backend_sa.email}"
+}
+
 # -------------------------------------------------
 # Airflow Service Account
 # Used by local Airflow pipeline to read/write GCS
