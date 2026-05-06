@@ -1,11 +1,9 @@
 """
 Downloads models from GCP Artifact Registry (Generic) and test data from GCS at container startup.
-Uses google-auth + requests (already in requirements.txt) — no gcloud CLI needed.
+Uses gcloud CLI for model downloads — the requests-based REST download produces corrupt files.
 """
 import os
-import requests
-import google.auth
-import google.auth.transport.requests
+import subprocess
 from google.cloud import storage
 
 # ── Model registry config ──────────────────────────────────────────────────────
@@ -31,43 +29,49 @@ MODELS = [
 ]
 
 
-def _credentials():
-    creds, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-    creds.refresh(google.auth.transport.requests.Request())
-    return creds
+def _gcloud(*args, timeout=300):
+    cmd = ["gcloud", "--quiet"] + list(args)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"gcloud failed (exit {result.returncode}):\n"
+            f"  stderr: {result.stderr.strip()}"
+        )
+    return result.stdout.strip()
 
 
-def _latest_version(creds, package: str) -> str:
-    url = (
-        f"https://artifactregistry.googleapis.com/v1/"
-        f"projects/{REGISTRY_PROJECT}/locations/{REGISTRY_LOCATION}/"
-        f"repositories/{MODELS_REPO}/packages/{package}/versions"
-        f"?orderBy=createTime+desc&pageSize=1"
+def _latest_version(package: str) -> str:
+    output = _gcloud(
+        "artifacts", "versions", "list",
+        f"--project={REGISTRY_PROJECT}",
+        f"--location={REGISTRY_LOCATION}",
+        f"--repository={MODELS_REPO}",
+        f"--package={package}",
+        "--sort-by=~createTime",
+        "--limit=1",
+        "--format=value(name)",
+        timeout=60,
     )
-    resp = requests.get(url, headers={"Authorization": f"Bearer {creds.token}"})
-    resp.raise_for_status()
-    versions = resp.json().get("versions", [])
-    if not versions:
+    if not output:
         raise RuntimeError(f"No versions found for package {package}")
-    return versions[0]["name"].split("/")[-1]
+    return output.split("/")[-1]
 
 
-def download_model(creds, package: str, filename: str):
-    version = _latest_version(creds, package)
-    url = (
-        f"https://{REGISTRY_LOCATION}-generic.pkg.dev/"
-        f"{REGISTRY_PROJECT}/{MODELS_REPO}/{package}/{version}/{filename}"
-    )
+def download_model(package: str, filename: str):
+    version = _latest_version(package)
     os.makedirs(MODELS_DIR, exist_ok=True)
-    dest = os.path.join(MODELS_DIR, filename)
-    print(f"  {package} v{version} → {dest}")
-    resp = requests.get(url, headers={"Authorization": f"Bearer {creds.token}"}, stream=True)
-    resp.raise_for_status()
-    with open(dest, "wb") as f:
-        for chunk in resp.iter_content(chunk_size=65536):
-            f.write(chunk)
+    print(f"  {package} v{version} → {MODELS_DIR}/{filename}")
+    _gcloud(
+        "artifacts", "generic", "download",
+        f"--project={REGISTRY_PROJECT}",
+        f"--location={REGISTRY_LOCATION}",
+        f"--repository={MODELS_REPO}",
+        f"--package={package}",
+        f"--version={version}",
+        f"--destination={MODELS_DIR}",
+        f"--name={filename}",
+        timeout=300,
+    )
 
 
 def download_test_data():
@@ -81,15 +85,11 @@ def download_test_data():
 
 if __name__ == "__main__":
     print(f"Downloading models from {MODELS_REPO}...")
-    try:
-        creds = _credentials()
-        for package, filename in MODELS:
-            try:
-                download_model(creds, package, filename)
-            except Exception as e:
-                print(f"  WARNING: {package} failed — {e}")
-    except Exception as e:
-        print(f"WARNING: Could not authenticate for model download — {e}")
+    for package, filename in MODELS:
+        try:
+            download_model(package, filename)
+        except Exception as e:
+            print(f"  WARNING: {package} failed — {e}")
 
     print(f"Downloading test data from gs://{DATA_BUCKET}/{DATA_BLOB}...")
     try:
