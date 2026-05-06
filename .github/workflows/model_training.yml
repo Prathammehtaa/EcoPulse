@@ -75,7 +75,7 @@ concurrency:
 
 # ── Shared environment ──────────────────────────────────────────
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.13"
   MODEL_SRC: "Model_Pipeline/src"
   MODELS_DIR: "Model_Pipeline/models"
   REPORTS_DIR: "Model_Pipeline/reports"
