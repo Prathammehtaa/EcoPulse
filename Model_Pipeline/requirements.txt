@@ -12,7 +12,7 @@ PyYAML>=6.0.0          # utils.py config
 xgboost>=2.0.0
 lightgbm>=4.0.0
 scikit-learn>=1.3.0
-joblib==1.4.2
+joblib==1.5.2
 
 # Hyperparameter optimisation
 optuna>=3.4.0
