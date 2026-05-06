@@ -52,6 +52,9 @@ jobs:
           cluster_name: ${{ env.CLUSTER }}
           location: ${{ env.REGION }}
 
+      - name: Create namespace if not exists
+        run: kubectl create namespace ecopulse --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy to GKE
         run: |
           kubectl set image deployment/backend \
