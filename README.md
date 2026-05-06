@@ -100,35 +100,7 @@ Models trained on **240,435 rows**, **91 features**, **6 years of data (2019–2
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    subgraph DATA["Data Layer"]
-        A1[Electricity Maps API\nhourly grid signals] --> DAG
-        A2[Open-Meteo API\nweather data] --> DAG
-        DAG[Airflow DAG\nCeleryExecutor] --> TFDV[TFDV Schema\nValidation]
-        TFDV --> DVC[DVC-versioned\nParquet on GCS]
-    end
-
-    subgraph MODEL["Model Layer — GitHub Actions"]
-        DVC --> TRAIN[XGBoost + LightGBM\n3 horizons: 1h / 12h / 24h]
-        TRAIN --> OPTUNA[Optuna\n50-trial Bayesian Tuning]
-        OPTUNA --> MLFLOW[MLflow\nExperiment Tracking]
-        MLFLOW --> REGISTRY[GCP Artifact Registry\nversioned model push]
-    end
-
-    subgraph SERVE["Serving Layer — GKE"]
-        REGISTRY --> API[FastAPI Backend\n/predict /forecast /metrics]
-        API --> REACT[React 18 + Vite\nfrontend on Nginx]
-        REACT --> OPS[Operator\napprove / deny]
-    end
-
-    subgraph MONITOR["Monitoring Layer"]
-        API --> PG[Pushgateway]
-        PG --> PROM[Prometheus\nscrape every 30s]
-        PROM --> GRAF[Grafana Dashboard\nMAE / R² / RMSE]
-        PROM -->|MAE > 35% threshold| RETRAIN[Auto-retrain\ntrigger]
-    end
-```
+![EcoPulse Architecture](docs/images/Architecture.png)
 
 ---
 
