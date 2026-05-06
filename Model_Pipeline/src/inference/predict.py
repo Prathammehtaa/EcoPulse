@@ -122,11 +122,24 @@ class CarbonPredictor:
 
             # Try each model type in priority order
             for prefix in ["xgboost_tuned", "xgboost", "lightgbm"]:
-                path = os.path.join(self.models_dir, f"{prefix}_{horizon}h.joblib")
-                if os.path.exists(path):
-                    model = joblib.load(path)
-                    model_type = prefix
-                    logger.info(f"Loaded {prefix}_{horizon}h.joblib")
+                candidates = (
+                    [f"{prefix}_{horizon}h.ubj", f"{prefix}_{horizon}h.joblib"]
+                    if prefix.startswith("xgboost")
+                    else [f"{prefix}_{horizon}h.joblib"]
+                )
+                for filename in candidates:
+                    path = os.path.join(self.models_dir, filename)
+                    if os.path.exists(path):
+                        if path.endswith('.ubj') or path.endswith('.json'):
+                            import xgboost as xgb
+                            model = xgb.XGBRegressor()
+                            model.load_model(path)
+                        else:
+                            model = joblib.load(path)
+                        model_type = prefix
+                        logger.info(f"Loaded {filename}")
+                        break
+                if model is not None:
                     break
 
             if model is None:

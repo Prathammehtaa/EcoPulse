@@ -22,9 +22,9 @@ MODELS_DIR = "/app/Model_Pipeline/models"
 DATA_DIR   = "/app/Data_Pipeline/data/processed"
 
 MODELS = [
-    ("ecopulse-xgboost-1h",   "xgboost_1h.joblib"),
-    ("ecopulse-xgboost-12h",  "xgboost_12h.joblib"),
-    ("ecopulse-xgboost-24h",  "xgboost_24h.joblib"),
+    ("ecopulse-xgboost-1h",   "xgboost_1h.ubj"),
+    ("ecopulse-xgboost-12h",  "xgboost_12h.ubj"),
+    ("ecopulse-xgboost-24h",  "xgboost_24h.ubj"),
     ("ecopulse-lightgbm-1h",  "lightgbm_1h.joblib"),
     ("ecopulse-lightgbm-12h", "lightgbm_12h.joblib"),
     ("ecopulse-lightgbm-24h", "lightgbm_24h.joblib"),

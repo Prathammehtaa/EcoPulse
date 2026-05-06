@@ -207,6 +207,8 @@ def train_all_horizons():
 
             # --- Save model locally ---
             save_model(result["model"], f"xgboost_{horizon}h")
+            ubj_path = os.path.join(MODELS_DIR, f"xgboost_{horizon}h.ubj")
+            result["model"].save_model(ubj_path)
 
             # --- Feature importance CSV + plot ---
             importance_path = os.path.join(REPORTS_DIR, f"xgb_importance_{horizon}h.csv")
@@ -228,7 +230,7 @@ def train_all_horizons():
             # --- GCP Artifact Registry push (opt-in) ---
             if _GCP_PUSH:
                 push_after_mlflow_log(
-                    model_path=os.path.join(MODELS_DIR, f"xgboost_{horizon}h.joblib"),
+                    model_path=os.path.join(MODELS_DIR, f"xgboost_{horizon}h.ubj"),
                     model_name=f"xgboost_{horizon}h",
                     version=os.getenv("RETRAIN_VERSION") or make_version_string("xgboost", horizon),
                     mlflow_run_id=run_id,
